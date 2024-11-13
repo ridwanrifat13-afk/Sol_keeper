@@ -1,0 +1,493 @@
+/**
+ * The run store.
+ *
+ * One deliberate wrinkle: the simulation mutates `SimState` in place, because a 30-sol run
+ * is 740 ticks and cloning the whole world every hour would be waste on the low-end phone
+ * this has to run on. Zustand notifies subscribers whenever `set` is called, regardless of
+ * whether object identity changed, so components select primitives out of the live state
+ * and `version` exists purely to make each tick a distinct store update.
+ *
+ * Nothing here decides anything about the simulation. All the rules live in @sol-keeper/sim.
+ */
+import { create, type StoreApi } from "zustand";
+import {
+  applyInput,
+  createRun,
+  getScenario,
+  landingSitesForBody,
+  replayRun,
+  tick as simTick,
+  EventLogger,
+  Rng,
+  type CommsPriority,
+  type Co2ScrubberMode,
+  type CropLightSchedule,
+  type CrewLocation,
+  type MoxieMode,
+  type Params,
+  type RecordedInput,
+  type ResearchTaskId,
+  type RunInput,
+  type Scenario,
+  type SetupChoices,
+  type SimState,
+  type StationId,
+  type SurvivalMode,
+  type SystemId,
+  type ThermalControlMode,
+  type TickContext,
+  type WaterReclamationMode,
+} from "@sol-keeper/sim";
+import { buildResourceSummary } from "../dial/resourceSummary.js";
+import type { StatusLevel } from "../components/status.js";
+import type { RunLinkConfig } from "../share/runLink.js";
+import { useDebugStats } from "./debugStats.js";
+
+const STATUS_RANK: Record<StatusLevel, number> = { nominal: 0, caution: 1, critical: 2 };
+
+/** UI upgrade #3: sparkline trend lines on the O2/water/battery gauges. One fraction sample
+ *  per real simulated hour, same 0-1 numbers `buildResourceSummary` already computes for the
+ *  gauge bars themselves — reusing that single source of truth (this file's own
+ *  `worstStatusRank` already does the same) rather than re-deriving the formulas here.
+ *  24 samples = one full day boundary's worth (`step()`'s own `hour % 24` cadence), a real,
+ *  already-established "recent" window rather than an arbitrary length. */
+const RESOURCE_HISTORY_LENGTH = 24;
+
+export interface ResourceHistory {
+  readonly oxygen: readonly number[];
+  readonly water: readonly number[];
+  readonly battery: readonly number[];
+}
+
+function emptyResourceHistory(): ResourceHistory {
+  return { oxygen: [], water: [], battery: [] };
+}
+
+/** Mutates `history`'s three arrays in place (push + cap), matching the file's own established
+ *  pattern for hot-loop tick state (`state: SimState` itself is mutated in place too, see this
+ *  file's header comment) — a `step()` covering many hours (a `+1 sol` click, 16x speed) would
+ *  otherwise mean rebuilding three arrays up to `hours` times per call for no benefit. */
+function pushResourceHistorySample(history: ResourceHistory, state: SimState): void {
+  const s = buildResourceSummary(state, "specialist");
+  for (const [key, value] of [
+    ["oxygen", s.oxygen.fraction],
+    ["water", s.water.fraction],
+    ["battery", s.battery.fraction],
+  ] as const) {
+    const series = history[key] as number[];
+    series.push(value);
+    if (series.length > RESOURCE_HISTORY_LENGTH) series.shift();
+  }
+}
+
+/** The worst of the six gauges' status ranks — used by auto-pause (M8.1) to notice a
+ *  threshold crossing regardless of which resource caused it. The dial level passed to
+ *  `buildResourceSummary` only affects its *text*, never the status itself, so any level
+ *  works here; "specialist" is arbitrary. */
+function worstStatusRank(state: SimState): number {
+  const s = buildResourceSummary(state, "specialist");
+  return Math.max(
+    STATUS_RANK[s.oxygen.status.level],
+    STATUS_RANK[s.co2.status.level],
+    STATUS_RANK[s.water.status.level],
+    STATUS_RANK[s.food.status.level],
+    STATUS_RANK[s.battery.status.level],
+    STATUS_RANK[s.cabin.status.level],
+  );
+}
+
+/** Real milliseconds per simulated hour at each speed — a genuine 1x/4x/16x ratio (the
+ *  brief's own literal M8 core-loop labels, M8.5), not just the text saying so: "slow" is
+ *  the 1x baseline, "normal" is exactly a quarter of its interval, "fast" exactly a
+ *  sixteenth. */
+export const SPEEDS = { paused: 0, slow: 1200, normal: 300, fast: 75 } as const;
+export type Speed = keyof typeof SPEEDS;
+
+const DEFAULT_PARAMS: Params = {
+  scenarioId: "jezero-outpost",
+  seed: 1,
+  crewSize: 4,
+  missionStartIso: "2033-03-01",
+  difficulty: "nominal",
+};
+
+/** M10.6: the three setup choices `buildCustomScenario` bakes into numeric fields
+ *  (`solarArrayAreaM2`, `shieldingGPerCm2`, …) and then discards the ids of — `scenario` alone
+ *  can't answer "what site/power/shielding was this run built from," but a "Copy report
+ *  link" (M10.7) needs exactly that alongside `params` to rebuild a `RunLinkConfig`. Omits
+ *  `crewSize`: that already lives in `Params` and would just be a second copy here. */
+export type RunSetupChoices = Omit<SetupChoices, "crewSize">;
+
+/** The same fallback `store/setup.ts`'s own `resolveScenario` uses for a step a player never
+ *  visited — matters here for every `reset()` caller that predates M9's setup wizard
+ *  (`ScenarioSwitch`, `TimeControls`' Restart, every bare `reset()` in a test) and so has no
+ *  real setup choices of its own to pass. */
+function defaultSetupChoices(scenario: Scenario): RunSetupChoices {
+  const site = landingSitesForBody(scenario.body)[0];
+  if (site === undefined) throw new Error(`No landing site catalogued for body "${scenario.body}"`);
+  return {
+    landingSiteId: site.id,
+    powerArchitecture: "solarBattery",
+    shieldingApproach: "hullOnly",
+  };
+}
+
+interface RunStore {
+  params: Params;
+  scenario: Scenario;
+  state: SimState;
+  /** Bumped on every store update so selectors re-read the mutated state. */
+  version: number;
+  speed: Speed;
+  /** M8.1: "Sol Planning (paused, station by station)" vs. "run the sol" (brief's M8 core
+   *  loop). Gates every station's planning-only controls (TimeControls' own speed/step
+   *  buttons, PowerPriorities, rations, and this file's own setCommsPriority/setCrewLocation/
+   *  assignStation — M8.4 Parts A-E) and the "Run the sol" control (TimeControls.tsx) flips
+   *  it to "running". Reset to "planning" automatically at the same 24-hour day boundary
+   *  `packages/sim/src/engine/crewHours.ts` already uses for its own budget reset, so this
+   *  never invents a second "day" concept. */
+  phase: "planning" | "running";
+  /** M8.5: the just-completed sol's own hour window, set the instant `step()` crosses a day
+   *  boundary (the same moment `phase` resets to "planning") — `views/SolSummary/
+   *  SolSummaryView.tsx` reads this to show the brief's own "end-of-sol summary" overlay.
+   *  `undefined` once dismissed (dismissSolSummary) or before any sol has ever ended. */
+  justEndedSol: { startHour: number; endHour: number } | undefined;
+  /** M10.4: every player decision so far, tagged with the `state.hour` it was made at — the
+   *  input `@sol-keeper/sim`'s `replayRun` needs to reproduce this exact run byte-identically
+   *  from nothing but `params`/`scenario` (M10's own done-when bar). Appended to, never
+   *  mutated or reordered, by the same six actions below that used to mutate `state` with no
+   *  record at all. */
+  inputLog: RecordedInput[];
+  /** M16: Tagged when a run is reloaded from a previous decision via "Try Again" rewind.
+   *  Second-try runs are excluded from percentile statistics and Mission of the Day. */
+  isSecondTry: boolean;
+  /** M16: Tagged when running the daily UTC challenge mission. */
+  isMissionOfTheDay: boolean;
+  /** M10.6: the setup choices `scenario` was built from — see `RunSetupChoices`'s own doc
+   *  comment. Set by every `reset()` call alongside `scenario` itself, so the two can never
+   *  silently disagree about which run they describe. */
+  setupChoices: RunSetupChoices;
+  /** UI upgrade #3: recent oxygen/water/battery fraction samples, for the Gauge sparklines —
+   *  see `pushResourceHistorySample`'s own doc comment. */
+  resourceHistory: ResourceHistory;
+
+  step: (hours?: number) => void;
+  setSpeed: (speed: Speed) => void;
+  setPhase: (phase: "planning" | "running") => void;
+  dismissSolSummary: () => void;
+  /** `scenarioOverride` is M9's own setup flow's seam: `store/setup.ts`'s `commit()` builds a
+   *  custom `Scenario` (`buildCustomScenario`) from a player's landing-site/crew-size/power/
+   *  shielding choices and hands it straight through here, so `scenario` and `state` are
+   *  built from the exact same object — never resolved twice and left free to disagree.
+   *  Defaults to the base scenario `params.scenarioId` names, matching every pre-M9 caller. */
+  reset: (
+    params?: Partial<Params>,
+    scenarioOverride?: Scenario,
+    setupChoicesOverride?: RunSetupChoices,
+  ) => void;
+  setSurvivalMode: (mode: SurvivalMode) => void;
+  /** Player request (M9.x): a real lever in nominal conditions, not just during an incident —
+   *  see Co2ScrubberMode's own doc comment (@sol-keeper/sim) for the trade-off this controls. */
+  setCo2ScrubberMode: (mode: Co2ScrubberMode) => void;
+  /** Player request (M9.x): "quiet sol" interactivity — a routine, any-sol maintenance action
+   *  (Mars only), not gated behind the one scripted dust-storm incident. A no-op (silently, the
+   *  same "invalid target" discipline every other action here already uses) on a Moon scenario
+   *  or when today's crew-hours budget can't cover it — the console only offers the button when
+   *  it would actually do something. */
+  cleanSolarArrays: () => void;
+  /** Player request (M9.x batch 2): the Brine Processor Assembly toggle — see
+   *  WaterReclamationMode's own doc comment (@sol-keeper/sim) for the trade-off. */
+  setWaterReclamationMode: (mode: WaterReclamationMode) => void;
+  /** Player request (M9.x batch 2): the thermalControl duty-cycle toggle — see
+   *  ThermalControlMode's own doc comment (@sol-keeper/sim) for the scenario-dependent risk. */
+  setThermalControlMode: (mode: ThermalControlMode) => void;
+  /** Player request (M9.x batch 2): raises the day's crew-hours ceiling at the real cost of
+   *  fatigue on whatever's actually spent above the un-boosted budget — see
+   *  CrewHoursState.overtimeAuthorized's own doc comment (@sol-keeper/sim). */
+  setOvertimeAuthorized: (authorized: boolean) => void;
+  /** Player request: Habitat page's "quiet sol" scheduled-maintenance lever — see
+   *  SystemState.maintenanceCreditUntilHour's own doc comment (@sol-keeper/sim). A no-op
+   *  (same "invalid target"/"can't afford it" discipline every other lever here uses) when
+   *  the system doesn't exist for this scenario or today's crew-hours budget can't cover it. */
+  performScheduledMaintenance: (systemId: SystemId) => void;
+  /** Player request: Incident Command's print-a-spare lever (NASA AMF-inspired) — see
+   *  management.printSpareWallClockHours's own doc comment (@sol-keeper/sim). The spare
+   *  itself appears only once real wall-clock time has passed, not immediately. */
+  printSpare: (systemId: SystemId) => void;
+  /** Player request: Incident Command's repair-queue reordering — the same swap-with-
+   *  neighbour pattern setPriority already uses, applied to state.crewHours.queue instead of
+   *  system load-shed order. */
+  reorderRepairQueue: (index: number, direction: -1 | 1) => void;
+  setPriority: (id: SystemId, direction: -1 | 1) => void;
+  /** M8.1: the player-driven counterpart to `tickWithBot`'s bot-driven incident resolution
+   *  (packages/sim/src/engine/runWithBot.ts) — the exact seam that file's own doc comment
+   *  names for M8. Builds the same ad hoc `TickContext` shape, but does not re-run `PIPELINE`
+   *  or advance `state.hour`: the hour's tick already happened, this only answers a pending
+   *  Decision Card. */
+  resolveIncident: (incidentId: string, responseId: string) => void;
+  /** Moves one crew member between habitat/storm shelter/EVA — the mechanism behind Incident
+   *  Command's shelter-order and EVA go/no-go controls (M8.4 Part D). Already a real lever
+   *  with zero sim changes: `radiationStage` (packages/sim/src/models/radiation.ts) reads
+   *  every living member's `location` unconditionally every hour. */
+  setCrewLocation: (crewId: string, location: CrewLocation) => void;
+  /** Mission Command's crew-assignment control (M8.4 Part E). Mutates the `readonly
+   *  primaryStation` field via the same cast-workaround `setPriority` below already uses on
+   *  `SystemState.priority` — no sim-side type change needed. */
+  assignStation: (crewId: string, station: StationId) => void;
+  /** Comms' downlink-priority control (M8.4 Part C) — a real, mutually exclusive trade-off
+   *  `models/comms.ts`'s own `commsStage` reads every hour: the same comms uptime accrues
+   *  either jezero-outpost's own science goal or crew morale, never both. */
+  setCommsPriority: (priority: CommsPriority) => void;
+  /** M14: Crop lighting schedule lever — trades electrical demand against biomass growth rate. */
+  setCropLightSchedule: (schedule: CropLightSchedule) => void;
+  /** M14: MOXIE power-share lever — toggles ISRU O2 generation capacity and power consumption. */
+  setMoxieMode: (mode: MoxieMode) => void;
+  /** M14: Active research choice — invests crew-hours, power, or dose margin to gain science points. */
+  conductResearch: (taskId: ResearchTaskId) => void;
+  /** Orders an emergency mission abort to preserve crew safety. */
+  abortMission: () => void;
+  /** M16: Try Again — rewinds the simulation state to a chosen decision index in inputLog. */
+  rewindToDecision: (decisionIndex: number) => void;
+  /** M16: Sets whether the active run is the daily UTC challenge mission. */
+  setMissionOfTheDay: (active: boolean) => void;
+}
+
+/**
+ * M10.4: the one call site every player-decision action below goes through — builds the same
+ * ad hoc `TickContext` `resolveIncident` already built pre-M10.4 (a fresh `Rng` view over the
+ * live `state.rng`, an `EventLogger` whose constructor recovers the right starting `seq` for
+ * an hour `tick()` itself already wrote to, M10.3), hands it to `applyInput` so every one of
+ * the six kinds mutates state and logs its own causal entry the same single way, and appends
+ * `{ hour, input }` to `inputLog` so `replayRun` can reproduce this exact call later.
+ */
+function applyAndRecord(
+  get: StoreApi<RunStore>["getState"],
+  set: StoreApi<RunStore>["setState"],
+  input: RunInput,
+): void {
+  const { state, params, scenario, version, inputLog } = get();
+  const ctx: TickContext = {
+    state,
+    params,
+    scenario,
+    rng: new Rng(state.rng),
+    log: new EventLogger(state.log, state.hour),
+    dtHours: 1,
+  };
+  applyInput(ctx, input);
+  set({ version: version + 1, inputLog: [...inputLog, { hour: state.hour, input }] });
+}
+
+export const useRun = create<RunStore>((set, get) => ({
+  params: DEFAULT_PARAMS,
+  scenario: getScenario(DEFAULT_PARAMS.scenarioId),
+  state: createRun(DEFAULT_PARAMS),
+  version: 0,
+  speed: "paused",
+  phase: "planning",
+  justEndedSol: undefined,
+  inputLog: [],
+  isSecondTry: false,
+  isMissionOfTheDay: false,
+  setupChoices: defaultSetupChoices(getScenario(DEFAULT_PARAMS.scenarioId)),
+  resourceHistory: emptyResourceHistory(),
+
+  step: (hours = 1) => {
+    const { state, params, scenario, resourceHistory } = get();
+    let autoPaused = false;
+    let justEndedSol: { startHour: number; endHour: number } | undefined;
+
+    for (let i = 0; i < hours && state.status === "running"; i++) {
+      const previousWorstRank = worstStatusRank(state);
+      const previousDetectedIds = new Set(
+        state.activeIncidents
+          .filter((inc) => inc.detectedAtHour !== undefined)
+          .map((inc) => inc.id),
+      );
+
+      // `?debug=1`'s own tick-time metric (M11) — timed here, the one place every real tick
+      // actually goes through, rather than guessed from an overall frame rate that a paused
+      // clock or a quiet hour would show as fine regardless.
+      const tickStart = performance.now();
+      simTick(state, params, scenario);
+      useDebugStats.getState().recordTick(performance.now() - tickStart);
+      pushResourceHistorySample(resourceHistory, state);
+
+      // A day boundary always halts the clock immediately (Sol Planning locks it, M8.4 Part
+      // A) — crossing more than one in a single step() call would otherwise be possible at
+      // high speed and would silently skip reviewing the sol(s) in between.
+      if (state.hour % 24 === 0) {
+        justEndedSol = { startHour: state.hour - 24, endHour: state.hour };
+        autoPaused = true;
+        break;
+      }
+
+      const newlyDetected = state.activeIncidents.some(
+        (inc) => inc.detectedAtHour !== undefined && !previousDetectedIds.has(inc.id),
+      );
+      if (newlyDetected || worstStatusRank(state) > previousWorstRank) {
+        autoPaused = true;
+        break;
+      }
+    }
+
+    set((s) => ({
+      version: s.version + 1,
+      speed: autoPaused || state.status !== "running" ? "paused" : s.speed,
+      phase: justEndedSol !== undefined ? "planning" : s.phase,
+      justEndedSol: justEndedSol ?? s.justEndedSol,
+    }));
+  },
+
+  setSpeed: (speed) => {
+    set({ speed });
+  },
+
+  setPhase: (phase) => {
+    set({ phase });
+  },
+
+  dismissSolSummary: () => {
+    set({ justEndedSol: undefined });
+  },
+
+  reset: (overrides = {}, scenarioOverride, setupChoicesOverride) => {
+    const params = { ...DEFAULT_PARAMS, ...overrides };
+    const scenario = scenarioOverride ?? getScenario(params.scenarioId);
+    set({
+      params,
+      scenario,
+      state: createRun(params, scenario),
+      version: 0,
+      speed: "paused",
+      phase: "planning",
+      justEndedSol: undefined,
+      inputLog: [],
+      isSecondTry: false,
+      isMissionOfTheDay: false,
+      setupChoices: setupChoicesOverride ?? defaultSetupChoices(scenario),
+      resourceHistory: emptyResourceHistory(),
+    });
+  },
+
+  setSurvivalMode: (mode) => {
+    applyAndRecord(get, set, { kind: "rations", mode });
+  },
+
+  setCo2ScrubberMode: (mode) => {
+    applyAndRecord(get, set, { kind: "co2ScrubberMode", mode });
+  },
+
+  cleanSolarArrays: () => {
+    applyAndRecord(get, set, { kind: "cleanSolarArrays" });
+  },
+
+  setWaterReclamationMode: (mode) => {
+    applyAndRecord(get, set, { kind: "waterReclamationMode", mode });
+  },
+
+  setThermalControlMode: (mode) => {
+    applyAndRecord(get, set, { kind: "thermalControlMode", mode });
+  },
+
+  setOvertimeAuthorized: (authorized) => {
+    applyAndRecord(get, set, { kind: "overtimeAuthorized", authorized });
+  },
+
+  performScheduledMaintenance: (systemId) => {
+    applyAndRecord(get, set, { kind: "scheduledMaintenance", systemId });
+  },
+
+  printSpare: (systemId) => {
+    applyAndRecord(get, set, { kind: "printSpare", systemId });
+  },
+
+  reorderRepairQueue: (index, direction) => {
+    applyAndRecord(get, set, { kind: "reorderRepairQueue", index, direction });
+  },
+
+  /**
+   * Moves a system up or down the load-shed order. Lower `priority` is shed last, so
+   * "up" means a smaller number. Swaps with the neighbour rather than reindexing, which
+   * keeps the ordering stable and the change legible to the player.
+   */
+  setPriority: (id, direction) => {
+    applyAndRecord(get, set, { kind: "priority", systemId: id, direction });
+  },
+
+  resolveIncident: (incidentId, responseId) => {
+    applyAndRecord(get, set, { kind: "incidentResponse", incidentId, responseId });
+  },
+
+  setCrewLocation: (crewId, location) => {
+    applyAndRecord(get, set, { kind: "crewLocation", crewId, location });
+  },
+
+  assignStation: (crewId, station) => {
+    applyAndRecord(get, set, { kind: "station", crewId, station });
+  },
+
+  setCommsPriority: (priority) => {
+    applyAndRecord(get, set, { kind: "commsPriority", priority });
+  },
+
+  setCropLightSchedule: (schedule) => {
+    applyAndRecord(get, set, { kind: "cropLightSchedule", schedule });
+  },
+
+  setMoxieMode: (mode) => {
+    applyAndRecord(get, set, { kind: "moxieMode", mode });
+  },
+
+  conductResearch: (taskId) => {
+    applyAndRecord(get, set, { kind: "conductResearch", task: taskId });
+  },
+
+  abortMission: () => {
+    applyAndRecord(get, set, { kind: "abort" });
+  },
+
+  rewindToDecision: (decisionIndex) => {
+    const { inputLog, params, scenario, version } = get();
+    if (decisionIndex < 0 || decisionIndex >= inputLog.length) return;
+
+    const target = inputLog[decisionIndex]!;
+    const slicedInputs = inputLog.slice(0, decisionIndex);
+    const targetHour = target.hour;
+
+    const replayed = replayRun(params, scenario, slicedInputs, targetHour);
+
+    set({
+      state: replayed,
+      inputLog: slicedInputs,
+      isSecondTry: true,
+      phase: "planning",
+      speed: "paused",
+      justEndedSol: undefined,
+      resourceHistory: emptyResourceHistory(),
+      version: version + 1,
+    });
+  },
+
+  setMissionOfTheDay: (active) => {
+    set({ isMissionOfTheDay: active });
+  },
+}));
+
+/** M10.7: "Copy report link" — every field a `RunLinkConfig` needs, straight from the live
+ *  store. A plain field mapping, no resolution needed (unlike `store/setup.ts`'s own
+ *  `buildClassLinkConfig`, which still has an unvisited-landing-site-step case to handle):
+ *  post-M10.6, `setupChoices` is always already resolved by the time any run exists. */
+export function runLinkConfigFromStore(
+  store: Pick<RunStore, "params" | "setupChoices">,
+): RunLinkConfig {
+  return {
+    scenarioId: store.params.scenarioId,
+    difficulty: store.params.difficulty,
+    crewSize: store.params.crewSize,
+    landingSiteId: store.setupChoices.landingSiteId,
+    powerArchitecture: store.setupChoices.powerArchitecture,
+    shieldingApproach: store.setupChoices.shieldingApproach,
+    seed: store.params.seed,
+  };
+}
