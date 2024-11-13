@@ -1,0 +1,481 @@
+import type { ScenarioId } from "@sol-keeper/sim";
+import type { DialLevel } from "./types.js";
+
+export interface MissionGuide {
+  readonly title: string;
+  readonly tagline: string;
+  readonly paragraphs: readonly string[];
+  /** An ordered, plain-language walkthrough of how to actually run this mission — written
+   *  for someone with no space or engineering background, not a strategy summary for someone
+   *  who's already played. */
+  readonly steps: readonly string[];
+  /** Every real way this specific mission can end badly — the scripted hazards this scenario
+   *  schedules, plus the general lethal/mission-ending mechanics every mission shares
+   *  (packages/sim's own engine/outcome.ts), reworded in plain terms. */
+  readonly failureModes: readonly string[];
+}
+
+export interface GuideControl {
+  readonly name: string;
+  readonly where: string;
+  readonly effect: string;
+}
+
+/**
+ * Player request: "update the mission guides including how to lead a mission to success step
+ * by step... what can fail a mission, what to toggle for what (even a non science user can
+ * easily understand how to run the mission)."
+ *
+ * Every hour/duration/magnitude/spares figure below is read straight off the scenario's own
+ * definition (packages/sim/src/data/scenarios/*.ts) or the engine's own real mechanics
+ * (engine/outcome.ts's determineOutcome/requestAbort, models/crew.ts's lethal clocks) — this
+ * is strategy and reference prose grounded in what the sim actually schedules and enforces,
+ * not invented tips. Plain English only (new, supplementary content outside the five i18n
+ * tables validation/i18nCompleteness.test.ts tracks — decisionText/logText/onboardingText/
+ * goalText/gaugeHelp — the same scope limit several other new panels already use for their
+ * own plain-English copy).
+ *
+ * `CONTROLS_REFERENCE` is deliberately scenario-independent and shown once, not duplicated
+ * per mission in `MISSION_GUIDES` — every one of these controls exists, means the same thing,
+ * and lives on the same console in all three missions; only how much it matters changes,
+ * which is exactly what each mission's own `steps`/`failureModes` already say. One list this
+ * project can keep accurate as controls change, not three copies that can quietly drift.
+ */
+export const CONTROLS_REFERENCE: readonly GuideControl[] = [
+  {
+    name: "Rations (Nominal / Reduced / Survival)",
+    where: "Life Support, locked to Sol Planning",
+    effect:
+      "Eating and drinking less stretches your food and water further, but it costs crew morale and lets the cabin run colder. A real trade, not a free saving — use it when you're actually running short, not by default.",
+  },
+  {
+    name: "Air cleaner / CO2 scrubber (Full scrub / Balanced / Ease off for crops)",
+    where: "Life Support, locked to Sol Planning",
+    effect:
+      "Running it below full lets cabin CO2 climb — a documented, real boost to how fast your crops grow if you keep it under control, but a real risk of crossing your current rations mode's own CO2 limit if you forget about it.",
+  },
+  {
+    name: "Water reclamation (Standard / Brine Processor Assembly)",
+    where: "Life Support, locked to Sol Planning",
+    effect:
+      "The Brine Processor Assembly recovers far more water from the loop — real ISS hardware — at the cost of a recurring daily bite out of your crew-hours budget, the same pool repairs and incident responses draw from.",
+  },
+  {
+    name: "Heating & cooling (Comfort / Power-save)",
+    where: "Life Support, locked to Sol Planning",
+    effect:
+      "Power-save trims the heater/cooler to free up electricity for everything else, at the cost of a cabin that drifts away from your rations mode's own comfort temperature — felt as real cold (or heat) hours, checked to never freeze the cabin outright.",
+  },
+  {
+    name: "Power priority list",
+    where: "Power, locked to Sol Planning",
+    effect:
+      "When demand outruns what you can generate and store, whatever sits at the bottom of this list goes dark first. Put whatever you can't afford to lose — life support, the CO2 scrubber — near the top, and put anything you can live without (a crop tray, MOXIE) near the bottom on purpose.",
+  },
+  {
+    name: "Clean solar arrays (Mars missions only)",
+    where: "Power, locked to Sol Planning",
+    effect:
+      "Dust settles on the arrays every sol whether or not a storm hits. Spends real crew-hours and a real radiation dose from the EVA, but clears the array back to its best output — a routine chore worth doing on a quiet sol, not just after a storm.",
+  },
+  {
+    name: "Downlink priority (Personal correspondence / Science downlink)",
+    where: "Comms, locked to Sol Planning",
+    effect: "A real trade between crew morale (personal messages home) and mission science points (the downlink). Neither is free.",
+  },
+  {
+    name: "Crew location (habitat / storm shelter / EVA)",
+    where: "Incident Command",
+    effect:
+      "Move a crew member to the storm shelter before or during a solar particle event to shield them from real radiation dose; send someone on EVA when a response (like cleaning the arrays) actually needs it, knowing EVA itself costs a real dose.",
+  },
+  {
+    name: "Crew station assignment",
+    where: "Mission Command",
+    effect:
+      "Which of the five stations (Power, Life Support, Comms, Incident Command, Mission Command) each crew member covers. A station nobody covers still gets an emergency response from whoever's free, just a weaker one — leaving one thin is a real, felt risk, not just a cosmetic choice.",
+  },
+  {
+    name: "Authorize overtime (Standard hours / Authorize overtime)",
+    where: "Mission Command",
+    effect:
+      "Raises today's crew-hours ceiling for extra incident response or repairs — but any hours actually worked past the normal budget cost the whole crew real fatigue once the sol ends. Free if you authorize it and don't end up needing the extra hours.",
+  },
+  {
+    name: "Incident responses (the Decision Card)",
+    where: "Wherever an incident's Decision Card appears",
+    effect:
+      "When something breaks, you choose how to fix it. Every option shown is real and has a real, disclosed cost — crew-hours, spare parts, or a permanent efficiency penalty if you use the cheap fix. Read the mechanism line before picking; the cheapest option is rarely free of a lasting cost.",
+  },
+];
+
+/** The five choices made once, before a mission starts (the Setup wizard) — not a mid-mission
+ *  toggle, but still a real answer to "what do I set, and what does it actually do." */
+export const SETUP_CONTROLS_REFERENCE: readonly GuideControl[] = [
+  {
+    name: "Difficulty (Training / Nominal / Flight-rated)",
+    where: "Setup",
+    effect:
+      "Scales how often incidents and random system failures happen, and how much warning you get before one hits. It never touches a physics constant — crew, radiation, food, water, and thermal behave identically at every difficulty.",
+  },
+  {
+    name: "Crew size (2-6)",
+    where: "Setup",
+    effect:
+      "More crew means more stations properly covered and a bigger daily crew-hours budget, but also more mouths to feed and water. A crew smaller than 5 leaves at least one station unstaffed from the start.",
+  },
+  {
+    name: "Landing site",
+    where: "Setup",
+    effect:
+      "A real trade in radiation, ice access, terrain difficulty, and sunlight — shown with a confidence badge per figure, since a few of these numbers are the best available estimate rather than a directly measured one.",
+  },
+  {
+    name: "Power architecture (Solar + battery / Fission / Hybrid)",
+    where: "Setup",
+    effect:
+      "How you generate and store power, sized to your own chosen crew size and site. A reactor removes most of the day/night power problem outright, at a real mass cost at launch.",
+  },
+  {
+    name: "Shielding approach (Hull only / Water wall / Regolith berm)",
+    where: "Setup",
+    effect:
+      "Water wall adds real radiation shielding by launching extra water mass; a regolith berm adds more shielding for free launched mass, funded instead by real pre-mission crew-hours. Hull only is the free default with the least protection.",
+  },
+];
+
+export const MISSION_GUIDES: Record<ScenarioId, MissionGuide> = {
+  "jezero-outpost": {
+    title: "Jezero Outpost",
+    tagline: "Mars · 30 sols · solar power and a real dust storm",
+    paragraphs: [
+      "Jezero runs entirely on solar arrays and a 200 kWh battery — no reactor backup. The mission's whole lesson arrives at hour 200: a 60-hour dust storm cuts your array output for over two days straight. The sim sheds load reactively, not ahead of time — it won't protect a system you forgot to rank, so the work has to happen before the storm, not during it.",
+      "Quiet sols aren't idle waiting either. Five dials in Sol Planning keep working the whole mission through — rations, the CO2 scrubber, water reclamation, thermal control, and crew overtime — each a real trade against something else the mission needs, covered in the controls reference below.",
+    ],
+    steps: [
+      "Setup: pick your crew size and power/shielding before you launch. Since Jezero has no reactor, extra battery margin (a bigger solar-battery sizing) matters more here than on either Moon mission — you're carrying your own night-time and storm-time power the whole way.",
+      "Every sol, before clicking \"Run the sol\": check all five resource gauges (oxygen, CO2, water, food, battery). If any gauge already reads Caution, fix it now — adjust rations, the scrubber, or the power priority list — rather than hoping it holds through the sol.",
+      "Set your power priority list early and keep it honest: put life support and the CO2 scrubber near the top, and put the greenhouse and MOXIE (both optional for survival) near the bottom on purpose, so a shortfall sheds the things you can actually afford to lose.",
+      "By around hour 150, start building battery margin — charge headroom, not a full tank you immediately draw down. At hour 200 a 60-hour dust storm begins; whatever margin you haven't built by then, you won't get a second chance to build during it.",
+      "When the dust storm hits (hour 200-260), expect your solar output to stay low the whole time. Ride it out on the priority list and battery margin you already set — this is the sol where a poorly-ordered list actually costs you a system.",
+      "Around hour 300, a pump-related failure can strike a system with only one spare part in reserve. When its Decision Card appears, read the mechanism line on each option: one fix is cheap but leaves a permanent efficiency penalty, the other costs more crew-hours but leaves no lasting damage. You can't casually afford both paths on this mission, so choose deliberately.",
+      "Around hour 420, an 18-hour solar particle event arrives. Move every crew member to the storm shelter as soon as it starts (Incident Command) — staying in the open habitat during it adds real, avoidable radiation dose.",
+      "Around hour 500, a crop blight can hit. If you're chasing the stretch goal (harvest both crop trays), a hit here late in a 30-sol run is expensive to recover from — a healthy CO2-boosted grow cycle beforehand gives you more buffer.",
+      "In the final few sols, check your actual standing against the primary goal (science returned, dose within limits, everyone alive) — nothing warns you automatically that you're falling short before the 30-sol clock runs out.",
+    ],
+    failureModes: [
+      "Crew death from thirst, hunger, cold, or lack of oxygen — any resource gauge that's allowed to run out for long enough. This is the “loss” outcome: it ends the mission the moment every crew member is gone.",
+      "Cumulative radiation dose crossing the 600 mSv career limit for any one crew member — a mission-ending failure the instant it's crossed, even if that person is still alive and everyone else is fine.",
+      "The 30-sol clock running out without the primary goal met — not a death, but a “partial” outcome, not the success you're playing for.",
+      "Losing power to life support or the CO2 scrubber during the dust storm, if the priority list wasn't set correctly or the battery wasn't charged going in.",
+      "Letting the pump-failure Decision Card's warning window pass without a response — the sim applies a default outcome once the window closes, which is rarely the one you'd have chosen.",
+      "You can call off the mission yourself (abort) at any time, but on Mars it's only actually allowed during the same real low-fuel departure window Mars missions use — attempting it outside that window is rejected, not silently ignored.",
+    ],
+  },
+  "first-light": {
+    title: "First Light",
+    tagline: "Moon · 2 crew · one full 354-hour lunar night",
+    paragraphs: [
+      "First Light is one long argument for battery sizing. The Moon's daylight is far more productive than Mars's (no dust, no distance penalty), but for 354 straight hours there is exactly zero solar input — nothing in between. The 5000 kWh bank exists to carry full demand through the entire night; anything you let low-priority systems drain early is capacity the critical path won't have later.",
+      "Only 2 crew means every station assignment matters — there's no spare hands for double-covering without leaving something else thin. No MOXIE and no dust storms here — the Moon has no CO2 atmosphere to consume and no atmosphere at all to carry dust.",
+    ],
+    steps: [
+      "Setup: with only 2 crew, at least three of the five stations will start unstaffed. There's no fixing that with a setup choice — plan on some stations only getting an ad hoc emergency response, and weigh that when picking difficulty.",
+      "Conserve aggressively from the very first sol, not just as the night approaches. Every kWh a low-priority system (comms, the greenhouse, water recovery) draws during the day is capacity the battery won't have once the 354-hour night starts — shedding only happens once demand genuinely can't be met that hour, so nothing protects unused capacity for you.",
+      "Set your power priority list before daylight runs out: oxygen generator, water recovery, and life support belong well above comms and the greenhouse for a mission this power-constrained.",
+      "Around hour 100, an 18-hour solar particle event hits — while there's still daylight power to shelter through comfortably. Move crew to the storm shelter as soon as it starts; this is the easiest of this mission's hazards to handle cleanly.",
+      "As the lunar night approaches, this is the one mission where the thermal control power-save dial carries real risk, not just a mild one — First Light's own heater capacity has very little spare margin on the coldest stretch of a 354-hour night. Use it cautiously, and prefer trimming other systems first.",
+      "During the long night itself, watch the battery gauge closely every sol — it's the one number that tells you whether your pre-night conservation actually worked. A battery trending toward empty mid-night has no daylight coming to rescue it for a long time.",
+      "Around hour 500 (deep in the night, the worst possible time for it), a pump-related failure can hit a system with only one spare part in reserve — the same permanent-loss-versus-costly-repair choice Jezero's pump failure (Sol 12) forces, except now with a drained battery watching. Decide in advance which path you'll take if it happens.",
+      "The goal here is survival with no loss across the full 354 hours for the primary goal, plus finishing with no system left in a failed state for the stretch goal.",
+    ],
+    failureModes: [
+      "Crew death from thirst, hunger, cold, or lack of oxygen — with only 2 crew, losing even one is losing half your crew's own capacity to respond to whatever comes next.",
+      "Cumulative radiation dose crossing the 600 mSv career limit for either crew member — ends the mission instantly, independent of the battery or the night.",
+      "The battery running dry mid-night with real hours of darkness still left — the single most common way this specific mission goes wrong, and the one this whole guide's early steps exist to prevent.",
+      "The pump-failure Decision Card's warning window passing unanswered during the night, when crew-hours and battery margin are both already thin.",
+      "Reaching hour 354 with the mission clock still running but a system left in a failed state — survival alone clears the primary goal, but costs you the stretch goal.",
+      "Calling off the mission (abort) is allowed at any time on the Moon, unlike Mars — but it costs a real added transit time (about six days) taken directly off the mission clock, so it's a real cost, not a free undo.",
+    ],
+  },
+  "the-long-night": {
+    title: "The Long Night",
+    tagline: "Moon · 4 crew · three lunar nights, reactor-powered",
+    paragraphs: [
+      "The Long Night answers what First Light proves is nearly impossible without it: a real 40 kWe fission reactor, run across three full lunar synodic cycles — about 88.5 Earth days. No solar array at all; the reactor comfortably covers the ~9 kW peak load, including the roughly 7 kW of heating the Moon's -178°C night alone demands [NSSDC-FACTS]. Day/night stops being the problem here.",
+      "What replaces it is accumulated risk over a much longer mission. Crew radiation dose builds across all three nights, so a shelter decision on the first solar particle event still matters by the third — this mission is won or lost on patience and consistency, not on a single dramatic moment.",
+    ],
+    steps: [
+      "Setup: with 4 crew and a reactor doing the heavy lifting, this is the most forgiving of the three missions on power — spend your setup choices on radiation shielding and crop mix confidence instead of worrying about battery sizing.",
+      "Because the reactor covers demand comfortably, the power-saving dials (thermal control's power-save mode, easing off the CO2 scrubber) matter less here than on the other two missions. Don't reach for them by default — there's little to gain and a real cost if you do.",
+      "Treat every sol the same way from day one: this mission rewards consistency over 2124 hours, not a single good decision. Establish a stable rations mode and station assignment early and keep it rather than reacting sol to sol.",
+      "Around hour 150, an 18-hour solar particle event hits. Shelter your crew — and remember this is only the first of two: the same real radiation dose from this event stays on each crew member's record for the rest of the mission.",
+      "Around hour 900, a pump-related failure can strike — but here the affected system carries three spare parts in reserve, not one. That's real room to take the clean, no-permanent-penalty repair path both other missions can't always afford.",
+      "Around hour 1400, a crop blight can hit either the lettuce or wheat tray. Wheat's own 64-86 day growth cycle is chosen to fit inside this mission; recovering from a blight late still costs real time you have less of than it looks like at hour 1400.",
+      "Around hour 1800, a second, larger 24-hour solar particle event hits. By now your crew's cumulative dose already includes the first event — check every crew member's own dose gauge against the 600 mSv career limit before deciding how aggressively to keep operating outside the shelter during it.",
+      "Across all three nights, keep checking cumulative dose, not just the current event — it's the slow, easy-to-ignore failure mode on a mission this long, not a single dramatic shortfall.",
+      "The goal is the same shape as First Light: survive the full duration with no loss, and finish with nothing left broken for the stretch goal.",
+    ],
+    failureModes: [
+      "Crew death from thirst, hunger, cold, or lack of oxygen — same real lethal clocks as every mission, just with far more real hours for a small mistake to compound over 2124 hours.",
+      "Cumulative radiation dose crossing the 600 mSv career limit for any crew member — the mission's own single biggest real risk, since dose from all three solar particle events adds up on the same running total.",
+      "The 2124-hour clock running out without the primary goal met, or with a system left in a failed state costing the stretch goal.",
+      "Treating the reactor's power margin as an excuse to stop watching the gauges — power isn't this mission's constraint, but life support, food, and water still are.",
+      "Letting either pump-failure or crop-blight Decision Card's warning window pass unanswered.",
+      "Calling off the mission (abort) is allowed at any time on the Moon, at the same real cost as First Light — about six added days of transit time taken directly off the mission clock.",
+    ],
+  },
+  "green-thumb": {
+    title: "Green Thumb",
+    tagline: "Moon · 3 crew · 14 days · lunar greenhouse challenge",
+    paragraphs: [
+      "Green Thumb tests closed-loop food production at Marius Hills. With only 35 kg of dry rations for 3 crew members over 14 days (336 hours), achieving the stretch goal requires bringing both lettuce trays to harvest before departure.",
+      "The grow-light schedule is your primary lever: 'extended' schedule accelerates crop growth at the cost of higher electrical load, while 'low' conserves battery power during periods of low reserves. Balance lighting against life support demands to keep the outpost alive.",
+    ],
+    steps: [
+      "Monitor battery reserve each sol planning phase.",
+      "Adjust crop light schedules between nominal and extended to meet harvest deadlines.",
+      "Prioritize greenhouse power during safe periods and shed non-essential loads during alerts.",
+      "Respond to radiation warnings by sheltering crew.",
+      "Maintain all systems operational to maximize crew efficiency.",
+    ],
+    failureModes: [
+      "Battery depletion during dark cycles if extended lighting runs unchecked.",
+      "Crop stalling if light hours fall behind the required cycle time.",
+      "Crew fatigue if overtime or maintenance loads build up.",
+    ],
+  },
+  "storm-watch": {
+    title: "Storm Watch",
+    tagline: "Mars · 3 crew · 3 days · Archived event: May 10, 2024 (based on real solar activity)",
+    paragraphs: [
+      "Storm Watch replays a historic space weather event recorded by NASA DONKI instruments. On May 10, 2024, a major solar flare and coronal mass ejection unleashed intense proton flux across the solar system.",
+      "With 30 to 90 minutes of flare-to-particle onset warning, you must decide whether to reinforce your outpost storm shelter with water shielding, shelter in place to preserve tonight's electrical power, or risk crew exposure.",
+    ],
+    steps: [
+      "Track solar flare alerts in the Comms console.",
+      "On storm warning, decide between shelter reinforcement and saving battery power.",
+      "Keep crew inside the habitat storm shelter during peak particle flux.",
+      "Monitor crew radiation dose against OCHMO career and mission limits.",
+      "Survive the 72-hour storm period with zero crew loss.",
+    ],
+    failureModes: [
+      "Acute radiation sickness from failing to shelter.",
+      "Battery depletion during night hours if shelter reinforcement overspends power.",
+      "System damage from unresolved incident fallout.",
+    ],
+  },
+  "crisis-apollo13-co2": {
+    title: "Apollo 13 CO₂ Buildup",
+    tagline: "Translunar Return · 3 crew · 3.6-day (87-hour) return trajectory (April 1970)",
+    paragraphs: [
+      "Following an oxygen tank rupture at ~56 hours MET, the three crew evacuated to the Lunar Module Aquarius. Sized for 2 crew for 45 hours (about 2 days), Aquarius now supported 3 crew on an 87-hour (~3.6-day) return trajectory [A13-CO2].",
+      "The Command Module's square LiOH canisters were incompatible with Aquarius's round receptacles. Carbon dioxide rose steadily toward toxic levels until Mission Control devised an improvised adapter using suit hoses, flight plan covers, plastic bags, and duct tape.",
+    ],
+    steps: [
+      "Open Life Support Console to inspect the rising CO2 partial pressure (starting at ~3.8 mmHg and climbing).",
+      "Deploy the improvised LiOH adapter before ppCO2 reaches dangerous levels.",
+      "Maintain cabin air quality through translunar return.",
+    ],
+    failureModes: [
+      "ppCO2 exceeding lethal thresholds (~15-20 mmHg) without implementing the improvised canister adapter.",
+    ],
+  },
+  "crisis-spe-1972": {
+    title: "Solar Particle Event 1972",
+    tagline: "Historical 'What-If' · Lunar Surface · August 1972 Storm",
+    paragraphs: [
+      "One of the largest solar particle events of the space age occurred between Apollo 16 and Apollo 17 in August 1972. In this historical 'what-if' simulation, an Artemis-class outpost crew on the Moon must respond to the sudden radiation spike.",
+      "An unshielded astronaut on the lunar surface would receive >0.5 Gy over several hours [HRP-ARS] (~0.5 Gy over the 6-hour peak), causing acute radiation symptoms without shelter. Prompt evacuation to the regolith shelter (20 g/cm²) keeps cumulative dose under the 250 mSv 30-day limit [OCHMO-RAD].",
+    ],
+    steps: [
+      "Detect proton flux surge at event onset.",
+      "Evacuate crew to storm shelter immediately.",
+    ],
+    failureModes: [
+      "Crew radiation dose exceeding acute radiation sickness thresholds.",
+    ],
+  },
+  "crisis-mir-fire": {
+    title: "Mir Space Station Fire 1997",
+    tagline: "Mir Kvant-1 · February 1997 · Solid-Fuel Oxygen Generator Fire",
+    paragraphs: [
+      "On February 23, 1997 at 22:35 Moscow time, a solid-fuel oxygen generation candle (Vika / TGK) caught fire inside Kvant-1, spraying a blowtorch flame against the hull, blocking the path to Soyuz TM-24, and filling Mir with thick smoke.",
+      "The 6-person joint crew (Mir-22, Mir-23, and NASA researcher Jerry Linenger) donned emergency respirators and fought the fire with 3 station extinguishers while power and comms were disrupted.",
+    ],
+    steps: [
+      "Don respirators and deploy fire extinguishers.",
+      "Isolate ventilation to prevent toxic combustion products from engulfing the station.",
+    ],
+    failureModes: [
+      "Atmospheric hypoxia or crew asphyxiation from toxic combustion gases.",
+    ],
+  },
+};
+
+// TODO(M13): Wrap domain terms (carbon dioxide, radiation, solar particle storm, shielding, reactor, battery, rations, air cleaner, water recycler, air machine, storm shelter, Decision Card, Caution) in <Term> once the component is built.
+
+export const CADET_MISSION_GUIDES: Record<ScenarioId, MissionGuide> = {
+  "jezero-outpost": {
+    title: "Jezero Outpost",
+    tagline: "Mars · 30 days · solar power and a big dust storm",
+    paragraphs: [
+      "Jezero runs on solar panels and one big battery. There is no reactor to help. Around day 8, a dust storm hides the sun for over 2 days. When power runs short, the base turns things off, least important first. You decide what is important. Plan before the storm, not during it.",
+      "Quiet days matter too. Every day you can change five things: food and water rations, the air cleaner, the water recycler, the heater, and extra work hours. Each one helps something and costs something else. The list below explains each one.",
+    ],
+    steps: [
+      "Before launch, pick your crew size, your power, and your shielding. Jezero has no reactor, so a bigger battery helps a lot. You make all your own power for nights and storms.",
+      "Each day, before you press Run, check the five gauges: oxygen, CO2, water, food, and battery. If a gauge says Caution, fix it now. Change your rations, air cleaner, or power plan. Don't just hope it will be fine.",
+      "Make your power plan early. Put life support and the air cleaner at the top. Put the greenhouse and the air machine near the bottom. You can live without them for a while. Then, when power runs short, you lose only what you can spare.",
+      "Around day 6, get your battery as full as you can. Then try not to use it up. A dust storm starts around day 8. You can't fill the battery once the storm hides the sun.",
+      "When the storm hits, around days 8 to 10, your solar power stays low. You can't change that. Your plan protects you now. If your list is in the wrong order, you could lose an important system.",
+      "Around day 12, a pump can break. You have only one spare part. A Decision Card shows two ways to fix it. One is cheap but leaves the pump weaker for good. The other takes more crew time but fixes it fully. You can't afford both, so think before you pick.",
+      "Around day 17, a solar particle storm comes. It lasts 18 hours. When it starts, send everyone to the storm shelter. Use Incident Command. If you stay in the open, you get extra radiation you could have avoided.",
+      "Around day 20, a plant disease can hit. You may want the bonus goal: pick both plant trays. A late hit is hard to fix. Keep your plants healthy before then, so you have some to spare.",
+      "In the last few days, check your goals. Do you have enough science? Is everyone's radiation safe? Is everyone alive? Nothing warns you if you are falling behind before the 30 days end.",
+    ],
+    failureModes: [
+      "Running out of food, water, heat, or air.",
+      "Getting too much radiation over the safe limit.",
+      "The 30 days ending before you meet your science goal.",
+    ],
+  },
+  "first-light": {
+    title: "First Light",
+    tagline: "Moon · 2 crew · one long night, about 15 days",
+    paragraphs: [
+      "First Light is all about your battery. Days on the Moon are bright, with no dust. But the night lasts about 15 days. For all that time, there is no sunlight. Your huge battery must run the base all night. Any power you waste early is power you won't have later.",
+      "With only 2 crew, every job matters. There is no one extra to help. This mission has no air machine and no dust storms. The Moon has no air to make oxygen from, and no wind to carry dust.",
+    ],
+    steps: [
+      "Before launch: with 2 crew, three of the five jobs will have nobody. Setup can't fix that. In an emergency, someone can still help, but not as well. Keep that in mind when you pick how hard the mission is.",
+      "Save power from the very first day, not just when night is near. Anything the comms, the greenhouse, or the water recycler uses by day is power the battery won't have at night. The base only turns things off when it truly runs short. Nothing saves power for you.",
+      "Make your power plan before the sun goes down. Put the oxygen maker, the water recycler, and life support high on the list. Put comms and the greenhouse lower. This mission has very little power to spare.",
+      "Around day 4, an 18-hour solar particle storm comes. It is still daytime, so you have plenty of power. Send the crew to the storm shelter as soon as it starts. This is the easiest problem in this mission.",
+      "When night comes, be careful with the heater's power-save setting. On this mission it is risky. The heaters have very little extra power on the coldest part of the night. Try turning off other things first.",
+      "During the long night, check the battery gauge every day. It tells you if your saving worked. If the battery is heading for empty in the middle of the night, no sunlight is coming to help for a long time.",
+      "Around day 21, deep in the night, a pump can break. You have only one spare part. It is the same hard choice as on Jezero: a quick fix that leaves lasting damage, or a costly fix that does not. And now your battery is low. Decide ahead of time what you will do.",
+      "Your goal: keep everyone safe through the whole night. Your bonus goal: finish with nothing broken.",
+    ],
+    failureModes: [
+      "Running out of battery power before the long night ends.",
+      "Crew loss from cold, bad air, hunger, or thirst.",
+    ],
+  },
+  "the-long-night": {
+    title: "The Long Night",
+    tagline: "Moon · 4 crew · three long nights, with a reactor",
+    paragraphs: [
+      "The Long Night gives you a reactor. It is a small nuclear power plant. It makes power all day and all night. There are no solar panels. The reactor makes more power than the base needs, even to keep it warm in the freezing night. Day and night are no longer the problem. The mission lasts three Moon days and nights. That is about 88 days.",
+      "Now the danger is slow. Space radiation adds up across all three nights. A choice you make in the first storm still counts in the third. You win by being patient and steady. One big moment will not decide it.",
+    ],
+    steps: [
+      "Before launch: you have 4 crew and a reactor, so power is easier here. Spend your setup choices on radiation shielding and on your crops. You do not need to worry about battery size.",
+      "The reactor covers what the base needs, so power-saving settings matter less here. These are the heater's power-save mode and the air cleaner's easy mode. Do not use them just because they are there. You gain little, and they cost something.",
+      "Treat every day the same way. This mission is about staying steady for 88 days, not one great choice. Pick a steady ration setting and job plan early. Keep them. Do not change them every day.",
+      "Around day 6, an 18-hour solar particle storm hits. Send your crew to the shelter. This is only the first of two storms. Radiation your crew gets now stays on their record for the whole mission.",
+      "Around day 38, a pump can break. This time the system has three spare parts, not one. You have room to pick the fix that leaves no lasting damage. The other missions can't always afford that.",
+      "Around day 58, a plant disease can hit the lettuce or the wheat. Wheat takes 64 to 86 days to grow. That fits inside this mission. But fixing a late disease still takes time. You have less time than it seems.",
+      "Around day 75, a second, bigger storm hits. It lasts 24 hours. Your crew's radiation total already includes the first storm. Check each person's radiation gauge against the limit before you decide. How long can they stay outside the shelter?",
+      "Over all three nights, keep checking each person's total radiation. It is the slow danger that is easy to miss on a long mission.",
+      "The goal is the same as First Light: keep everyone safe for the whole mission. The bonus goal: finish with nothing broken.",
+    ],
+    failureModes: [
+      "Cumulative space radiation exceeding the career safety limit.",
+      "Letting equipment stay broken when the clock runs out.",
+    ],
+  },
+  "green-thumb": {
+    title: "Green Thumb",
+    tagline: "Moon · 3 crew · 14 days",
+    paragraphs: [
+      "Keep your greenhouse plants growing on the Moon. Food runs low without harvests.",
+      "Grow lights use power from your battery. Extra light makes plants grow faster. Save power when the battery runs low.",
+    ],
+    steps: [
+      "Check your battery every <Term>day</Term>.",
+      "Set greenhouse lights to normal or extra light.",
+      "Keep the cabin warm and clean the air.",
+      "Harvest fresh food when plants are fully grown.",
+      "Keep all three crew members healthy.",
+    ],
+    failureModes: [
+      "Running out of battery power in the dark.",
+      "Turning lights too low, stopping crop growth.",
+      "Solar storm radiation bursts.",
+    ],
+  },
+  "storm-watch": {
+    title: "Storm Watch",
+    tagline: "Mars · 3 crew · 3 days · based on real solar activity",
+    paragraphs: [
+      "A giant storm from the Sun is heading your way. This is based on real solar activity.",
+      "You have about one hour before particles arrive. Decide how to protect your crew.",
+    ],
+    steps: [
+      "Watch for storm warning alerts.",
+      "Move crew inside the shelter quickly.",
+      "Use water walls to block radiation.",
+      "Save battery power for cold night hours.",
+      "Keep all crew members safe.",
+    ],
+    failureModes: [
+      "Crew taking too much <Term>radiation</Term> dose.",
+      "Battery running out during the cold night.",
+      "Leaving crew outside during the storm.",
+    ],
+  },
+  "crisis-apollo13-co2": {
+    title: "Apollo 13 CO₂ Buildup",
+    tagline: "Heading home from the Moon · 3 crew · April 1970",
+    paragraphs: [
+      "On the way to the Moon, an oxygen tank burst. The 3 astronauts moved into the Moon lander, called Aquarius. It was built for 2 people for about 2 days. Now it had to keep 3 people safe for almost 4 days.",
+      "The filters from the main spaceship were square. The holes in the lander were round. They did not fit! Carbon dioxide, a gas we breathe out, kept building up. Mission Control had an idea. The crew made a fix from hoses, a cover, plastic bags, and tape.",
+    ],
+    steps: [
+      "Open the Life Support Console. Watch the carbon dioxide go up. It starts a little high and keeps rising.",
+      "Build the filter fix before the carbon dioxide gets dangerous.",
+      "Keep the air safe to breathe all the way home.",
+    ],
+    failureModes: [
+      "Carbon dioxide rising to dangerous levels before the filter fix is ready.",
+    ],
+  },
+  "crisis-spe-1972": {
+    title: "Solar Particle Event 1972",
+    tagline: "The Moon · a real storm from August 1972",
+    paragraphs: [
+      "In August 1972, the Sun sent out one of the biggest radiation storms of the space age. It came between two Moon missions, Apollo 16 and Apollo 17. So no astronaut was in the storm.",
+      "Scientists say astronauts outside on the Moon could have been in great danger. In this mission, imagine your crew is outside when it hits. Get them to a room with thick walls, fast.",
+    ],
+    steps: [
+      "Spot the radiation storm as it starts.",
+      "Move the crew to the storm shelter right away.",
+    ],
+    failureModes: [
+      "Crew taking dangerous levels of solar radiation outside the shelter.",
+    ],
+  },
+  "crisis-mir-fire": {
+    title: "Mir Space Station Fire 1997",
+    tagline: "Mir space station · February 1997 · a fire in an oxygen maker",
+    paragraphs: [
+      "On the old space station Mir, a machine that makes oxygen caught fire. Thick smoke, bad to breathe, filled the room.",
+      "The crew put on masks and fought the fire with fire extinguishers. Power and radio were hard to use too.",
+    ],
+    steps: [
+      "Put on masks. Use the fire extinguishers.",
+      "Shut off the air flow so the smoke does not spread.",
+    ],
+    failureModes: [
+      "Smoke spreading through the station before the fire is put out.",
+    ],
+  },
+};
+
+export function getMissionGuide(scenarioId: ScenarioId, dialLevel?: DialLevel): MissionGuide {
+  if (dialLevel === "cadet" && CADET_MISSION_GUIDES[scenarioId]) {
+    return CADET_MISSION_GUIDES[scenarioId];
+  }
+  return MISSION_GUIDES[scenarioId] ?? CADET_MISSION_GUIDES[scenarioId]!;
+}
