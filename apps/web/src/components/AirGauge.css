@@ -1,0 +1,50 @@
+.air-gauge-merged-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.air-gauge-split {
+  display: contents;
+}
+
+.air-details-toggle {
+  align-self: flex-start;
+  font-size: 0.78rem;
+  padding: 2px 6px;
+  color: #58a6ff;
+  margin-top: -2px;
+}
+
+.air-details-toggle:hover {
+  text-decoration: underline;
+}
+
+.air-details-card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 6px;
+  padding: 8px 12px;
+  margin-top: 4px;
+  font-size: 0.82rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.air-detail-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.air-detail-name {
+  color: #8b949e;
+  font-weight: 500;
+}
+
+.air-detail-val {
+  font-weight: 600;
+  color: #f0f6fc;
+}
+
