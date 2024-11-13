@@ -1,0 +1,285 @@
+import { useTranslation } from "react-i18next";
+import { FiRotateCcw } from "react-icons/fi";
+import { causalCascade, directEffects, runFingerprint, type Body, type LogEntry, type RunStatus, type StationId } from "@sol-keeper/sim";
+import { useDial } from "../../store/dial.js";
+import { useRun } from "../../store/run.js";
+import { logText } from "../../i18n/logText.js";
+import { useAppLanguage } from "../../i18n/useAppLanguage.js";
+import { groupIncidents, majorIncidents, type IncidentGroup } from "../../dial/blackBox.js";
+import { decisionTimeline } from "../../dial/decisionTimeline.js";
+import { whatNasaDidCards } from "../../dial/whatNasaDid.js";
+import { durationLabel, elapsedValue, timeUnitWord, timestampLabel } from "../../dial/missionTime.js";
+import { stationLabel } from "../../dial/labels.js";
+import type { DialLevel, Language } from "../../dial/types.js";
+import { ReportLinkButton } from "../../components/ReportLinkButton.js";
+import { ReplayControls } from "../../components/ReplayControls.js";
+
+/**
+ * M10.8: the Mission Report — the brief's own printable one-pager (print CSS → browser print
+ * to PDF): outcome, crew and their stations, site, a decision timeline tagged by station, the
+ * Black Box causal chain, one "What NASA did" card per real-world incident, a replay link, a
+ * data-sources footer. Deliberately a separate view from `DebriefView` (M10 plan's own
+ * finding #5): different jobs (this is one linear document meant to be read start to finish
+ * or printed, not an interactive exploration console) and different lifetimes (a landing page
+ * for an inbound report link, not a mid-app tab — `App.tsx` renders it as a third takeover
+ * alongside Setup, never inside the station-console shell).
+ *
+ * Bilingual scope: this file's own headings/labels/outcome text are real `t()` calls
+ * (`locales/en.json`/`bn.json`, M10.8). M11 closes the gap M10.8 disclosed
+ * (`report.disclosureNote`) for station names, decision text, and causal-chain descriptions:
+ * `logText()`/`stationLabel()` now take the same `language` this page reads via
+ * `useAppLanguage()`, so a Bangla-reading player sees the whole page in Bangla, DRAFT quality
+ * where noted (`docs/i18n/bn_review.csv`) rather than half the page silently staying English.
+ *
+ * M10.9: `<ReplayControls />` renders itself only while `store/replay.ts`'s `useReplay` is
+ * mid-replay (a report/replay link opened via `share/bootRunLink.ts`) — every section below it
+ * already reads live `useRun` state, so as the replay ticks forward this same page just fills
+ * in further, with no separate "replaying" layout to keep in sync with the finished one.
+ */
+export function MissionReportView({
+  onBack,
+  onRewind,
+}: {
+  onBack: () => void;
+  onRewind?: (station?: StationId) => void;
+}) {
+  const state = useRun((s) => s.state);
+  const scenario = useRun((s) => s.scenario);
+  const inputLog = useRun((s) => s.inputLog);
+  const rewindToDecision = useRun((s) => s.rewindToDecision);
+  const level = useDial((s) => s.level);
+  const language = useAppLanguage();
+  const { t } = useTranslation();
+
+  const body = scenario.body;
+  const livingCrew = state.crew.filter((c) => c.alive).length;
+  const log = state.log;
+  const incidents = majorIncidents(log);
+  const incidentGroups = groupIncidents(incidents, log);
+  const decisions = decisionTimeline(log);
+  const nasaCards = whatNasaDidCards(state.activeIncidents);
+
+  const { titleKey, detailKey } = outcomeKeys(state.status);
+  const outcomeVars = {
+    duration: durationLabel(state.hour, body),
+    timestamp: timestampLabel(state.hour, body),
+    living: livingCrew,
+    crew: state.crew.length,
+  };
+
+  return (
+    <div className="mission-report">
+      <div className="report-toolbar">
+        <button type="button" className="btn btn-quiet" onClick={onBack}>
+          ← {t("report.back")}
+        </button>
+        <p className="report-print-hint">{t("report.printHint")}</p>
+      </div>
+
+      <ReplayControls />
+
+      <header className="view-head report-head">
+        <h1>{t("report.title")}</h1>
+        <h2>{t(titleKey)}</h2>
+        <p className="view-hint">{t(detailKey, outcomeVars)}</p>
+        <p className="report-run-signature">
+          {t("report.runSignature")}: <code>{runFingerprint(state)}</code>
+        </p>
+      </header>
+
+      <p className="report-disclosure">{t("report.disclosureNote")}</p>
+
+      <section className="panel" aria-labelledby="report-crew-heading">
+        <h2 id="report-crew-heading">{t("report.crewHeading")}</h2>
+        <table className="report-crew-table">
+          <thead>
+            <tr>
+              <th scope="col">{t("report.crewName")}</th>
+              <th scope="col">{t("report.crewStatus")}</th>
+              <th scope="col">{t("report.primaryStation")}</th>
+              <th scope="col">{t("report.backupStation")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {state.crew.map((member) => (
+              <tr key={member.id}>
+                <td>{member.name}</td>
+                <td>{member.alive ? t("report.crewAlive") : t("report.crewLost")}</td>
+                <td>{stationLabel(member.primaryStation, level, language)}</td>
+                <td>{stationLabel(member.backupStation, level, language)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+
+      <section className="panel" aria-labelledby="report-site-heading">
+        <h2 id="report-site-heading">{t("report.siteHeading")}</h2>
+        <p>
+          {scenario.site.name} — {body === "mars" ? t("report.bodyMars") : t("report.bodyMoon")} (
+          {scenario.site.latDeg.toFixed(2)}°, {scenario.site.lonDeg.toFixed(2)}°)
+        </p>
+      </section>
+
+      <section className="panel" aria-labelledby="report-decisions-heading">
+        <h2 id="report-decisions-heading">{t("report.decisionsHeading")}</h2>
+        {decisions.length === 0 ? (
+          <p className="panel-hint">{t("report.decisionsEmpty")}</p>
+        ) : (
+          <ul className="report-decision-list">
+            {decisions.map(({ entry, station }, idx) => (
+              <li key={entry.id} className="report-decision-row" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem" }}>
+                <div>
+                  <span className="report-decision-station">
+                    {station !== undefined ? stationLabel(station, level, language) : "—"}
+                  </span>
+                  <span className="report-decision-time" style={{ marginLeft: "0.5rem", marginRight: "0.5rem" }}>
+                    {timestampLabel(entry.hour, body)}
+                  </span>
+                  <span className="report-decision-text">{logText(entry, level, language)}</span>
+                </div>
+                {idx < inputLog.length && (
+                  <button
+                    type="button"
+                    className="btn btn-quiet"
+                    style={{ fontSize: "0.85rem", whiteSpace: "nowrap" }}
+                    title="Rewind to this decision (Try Again)"
+                    onClick={() => {
+                      rewindToDecision(idx);
+                      onRewind?.(station);
+                    }}
+                  >
+                    <FiRotateCcw aria-hidden="true" /> Rewind to here
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="panel" aria-labelledby="report-causal-heading">
+        <h2 id="report-causal-heading">{t("report.causalChainHeading")}</h2>
+        <p className="panel-hint">{t("report.causalChainHint")}</p>
+        {incidentGroups.length === 0 ? (
+          <p className="panel-hint">{t("report.causalChainEmpty")}</p>
+        ) : (
+          <ul className="incident-list">
+            {incidentGroups.map((group) => (
+              <ReportIncidentRow
+                key={`${group.sample.id}-${group.count}`}
+                group={group}
+                log={log}
+                level={level}
+                language={language}
+                body={body}
+              />
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="panel" aria-labelledby="report-nasa-heading">
+        <h2 id="report-nasa-heading">{t("report.whatNasaDidHeading")}</h2>
+        {nasaCards.length === 0 ? (
+          <p className="panel-hint">{t("report.whatNasaDidEmpty")}</p>
+        ) : (
+          <ul className="nasa-card-list">
+            {nasaCards.map((card) => (
+              <li key={card.incidentId} className="nasa-card">
+                <p className="nasa-card-analogue">{card.analogue}</p>
+                <p className="nasa-card-source">
+                  {card.url !== undefined ? (
+                    <a href={card.url} target="_blank" rel="noreferrer">
+                      {card.title}
+                    </a>
+                  ) : (
+                    card.title
+                  )}
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="panel report-no-print" aria-labelledby="report-replay-heading">
+        <h2 id="report-replay-heading">{t("report.replayHeading")}</h2>
+        <p className="panel-hint">{t("report.replayHint")}</p>
+        <ReportLinkButton />
+      </section>
+
+      <footer className="panel report-data-sources-footer" aria-labelledby="report-sources-heading">
+        <h2 id="report-sources-heading">{t("report.dataSourcesHeading")}</h2>
+        <p className="panel-hint">{t("report.dataSourcesHint")}</p>
+        <p className="report-not-affiliated">{t("report.notAffiliated")}</p>
+      </footer>
+    </div>
+  );
+}
+
+function outcomeKeys(status: RunStatus): { titleKey: string; detailKey: string } {
+  switch (status) {
+    case "success":
+      return { titleKey: "report.titleSuccess", detailKey: "report.outcomeSuccess" };
+    case "partial":
+      return { titleKey: "report.titlePartial", detailKey: "report.outcomePartial" };
+    case "abort":
+      return { titleKey: "report.titleAbort", detailKey: "report.outcomeAbort" };
+    case "loss":
+      return { titleKey: "report.titleLoss", detailKey: "report.outcomeLoss" };
+    case "running":
+      return { titleKey: "report.titleRunning", detailKey: "report.outcomeRunning" };
+  }
+}
+
+/** Mirrors `DebriefView`'s own `IncidentRow` (same underlying `dial/blackBox.ts` grouping),
+ *  rendered separately rather than shared: this file's headings are real `t()` calls, and
+ *  Debrief's are not (M10 plan's own finding #5 — different jobs, not a shared component). */
+function ReportIncidentRow({
+  group,
+  log,
+  level,
+  language,
+  body,
+}: {
+  group: IncidentGroup;
+  log: readonly LogEntry[];
+  level: DialLevel;
+  language: Language;
+  body: Body;
+}) {
+  const effects = directEffects(log, group.sample.id);
+  const cascadeSize = causalCascade(log, group.sample.id).length;
+  const when =
+    group.count > 1
+      ? `${timeUnitWord(body)} ${elapsedValue(group.firstHour, body).toFixed(2)}–${elapsedValue(group.lastHour, body).toFixed(2)}`
+      : timestampLabel(group.firstHour, body);
+
+  return (
+    <li className="incident-row">
+      <div className="incident-head">
+        <span className="incident-time">{when}</span>
+        <span className="incident-text">
+          {logText(group.sample, level, language)}
+          {group.count > 1 ? ` (recurred ${group.count} times)` : ""}
+        </span>
+      </div>
+      <p className="incident-effects">
+        {group.count > 1 ? (
+          <>→ {group.totalDirectEffects} effects across all {group.count} occurrences.</>
+        ) : (
+          <>
+            → {effects.length} direct effect{effects.length === 1 ? "" : "s"}
+            {cascadeSize !== effects.length ? `, ${cascadeSize} total downstream` : ""}:{" "}
+            {effects
+              .slice(0, 6)
+              .map((e) => logText(e, level, language))
+              .join("; ")}
+            {effects.length > 6 ? "; …" : ""}
+          </>
+        )}
+      </p>
+    </li>
+  );
+}
