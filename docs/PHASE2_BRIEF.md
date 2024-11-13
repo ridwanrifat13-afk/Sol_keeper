@@ -1,0 +1,723 @@
+# PHASE 2 BRIEF — SOL KEEPER: from simulation to trainer
+Read first: @docs/PROJECT_BRIEF.md, @CLAUDE.md, @docs/DATA_SOURCES.md, @docs/LANDING_SITES.md.
+All earlier rules still apply (sourced constants only, determinism, no NASA logo,
+accessibility, env-var key handling, stop after each milestone).
+Today: 2026-09-22. Submission: 2026-09-27.
+
+## Where we are (after M6)
+- No onboarding: a first-time player meets seven tabs and a wall of gauges, with no goal.
+- Bangla is partial: five screens and all three-depth event-log text are English-only.
+- No mission setup: crew size, scenario and landing site are fixed; the Landing Site
+  screen is a viewer, not a picker.
+- No real-device testing (emulation + Lighthouse only).
+- No source row is human-verified yet.
+- THE CORE PROBLEM: this is a watched simulation, not a trainer. The mission always
+  succeeds, the crew is never truly at risk, decisions rarely change the outcome, and it
+  does not look or feel like a space mission.
+
+## Phase 2 goal
+A role-based trainer where the player's decisions decide success or failure, grounded in
+real physics, understandable within 60 seconds, and shareable in a classroom.
+
+## TERMINOLOGY (this changed — apply it everywhere, including existing code)
+- REALITY DIAL DEPTH = Cadet / Specialist / Commander. Presentation only. Never touches
+  the simulation. Unchanged from Phase 1.
+- MISSION DIFFICULTY = Training / Nominal / Flight-Rated. Scenario parameters only
+  (starting margins, incident frequency, warning time, hint level). Never touches physics.
+  Rename the old difficulty presets accordingly; keep save/URL compatibility by mapping
+  old names to new ones.
+- STATIONS = the five mission roles below. This is the new information architecture.
+Rename in code, UI strings (en + bn) and docs in one pass, and note it in CLAUDE.md.
+
+## STATIONS (the core of Phase 2)
+One person does not run a space mission. The outpost is operated through five stations.
+The player is the outpost lead and moves between them; each station is staffed by a named
+crew member whose condition affects it.
+
+1. POWER — generation, battery state of charge, load priorities, reactor or array health,
+   dust cleaning, brownout order, night/storm energy planning.
+2. LIFE SUPPORT & RESOURCES — O2, CO2, water loop, food stores and crops, rations
+   (survival modes), spares inventory, ISRU (MOXIE, ice runs).
+3. COMMUNICATIONS — Mission Control traffic delayed by the real light-time, Live Sky
+   space-weather alerts, conjunction and Earth-visibility windows, telemetry downlink,
+   science data return.
+4. INCIDENT COMMAND — active faults, repair scheduling, spare parts, EVA go/no-go, storm
+   shelter calls, depressurization response, fire response.
+5. MISSION COMMAND — crew assignment to stations and tasks, crew-hours, health and
+   morale, mission goals, abort decisions, daily plan approval.
+
+Station rules:
+- Each station has its own console view, its own alert state, and its own decision queue.
+  A station badge shows how many decisions are waiting; nothing critical is hidden behind
+  a tab the player has not opened — critical alerts surface globally.
+- CREW ↔ STATION: each crew member is qualified for a primary station and one backup.
+  An impaired crew member makes their station slower (longer response time, reduced repair
+  success). A lost crew member leaves their station unstaffed until Mission Command
+  reassigns someone, and a crew member covering two stations suffers a fatigue penalty.
+  This is how crew loss is felt in gameplay, not just in a message.
+- Decisions ORIGINATE AT STATIONS, from real state changes: something needs to be toggled,
+  rebalanced, checked or authorized. Examples: Power — "battery will not cover the shadow
+  period, cut a load or run the reactor hotter"; Life Support — "CO2 rising, scrubber
+  degraded, choose repair now or ration activity"; Comms — "solar particle event warning
+  received, Mission Control's advice is 14 minutes behind"; Incident Command — "coolant
+  leak, isolate the module or attempt a repair EVA"; Mission Command — "the botanist is
+  critical, reassign or abort the science plan". No decision may be cosmetic: each option
+  must change state in a way the Black Box can later trace.
+- OPTIONAL, ASK FIRST: because stations are separable, a pass-and-play classroom mode
+  where students take one station each is nearly free. Propose it in M9 planning; do not
+  build it without approval.
+
+## Design principles (non-negotiable)
+1. PASSIVE PLAY MUST FAIL. Doing nothing loses; sensible play usually wins; greedy play
+   sometimes wins. Enforced by automated balance tests.
+2. Every failure is explainable: the Black Box shows why it happened, which station saw it
+   first, and which decision could have prevented it.
+3. Stakes come from physics, not arbitrary damage. Every threshold is a constant in
+   constants.ts with a source or "placeholder", and is listed for the team to verify.
+4. Difficulty changes scenario parameters, never physics. The Reality Dial changes
+   presentation, never simulation.
+5. Crew loss is real but humane: no gore, respectful wording, all crew-loss text and
+   visuals in presentation/crewLoss.ts. Cadet depth: "<name> became too sick to continue.
+   The mission had to end." Specialist/Commander: "<name> was lost." Always followed by the
+   Black Box explanation, never a bare "Game Over". (Approved by the team.)
+6. Player-paced: the simulation pauses for decisions; nothing important happens while the
+   player cannot respond.
+7. Determinism preserved: SIM_VERSION + scenario + setup + seed + input log = identical
+   run. All new randomness uses the injected seeded RNG.
+8. Every new string goes through i18n with en and bn keys; CI fails on missing keys.
+9. Performance: 30+ FPS on a low-end Android phone (2–3 GB RAM), a low-power mode, and
+   prefers-reduced-motion honored.
+10. NO SILENT SCOPE CUTS. The deadline is 2026-09-27 and the team has accepted no
+    compromise on scope. If a milestone looks like it will not fit, STOP and ask me, with
+    options; never quietly simplify, stub, or skip a feature. Flag anything stubbed as
+    TODO(P2) in the milestone summary.
+11. Stop at each milestone end: tests, typecheck, lint, `vercel build`, commit, and a
+    summary of what was built, what is placeholder, and what the team must do.
+
+## M7 — Stakes: failure, incidents, balance (engine first, UI minimal)
+Engine:
+- Per-crew physiology: O2 status, CO2 exposure, hydration, nutrition, core temperature,
+  acute dose, cumulative dose, injury, fatigue, morale. Condition ladder
+  nominal → impaired → critical → lost, with time-at-threshold rules from constants.
+  Condition feeds station performance (see Station rules).
+- Failure modes, each reachable in tests: hypoxia, hypercapnia, dehydration, starvation,
+  hypothermia, acute radiation exposure (unsheltered during a particle event), cumulative
+  dose beyond the career limit (mission failure, not death), depressurization, fire, and a
+  power-collapse cascade (battery → heaters/ECLSS off → freeze → water → O2).
+- Incident system: a data-driven catalog. Each incident has id, historical analogue +
+  source ID, originating STATION, trigger (component reliability/TRL, scenario schedule, or
+  Live Sky), warning time, physics effect, 2–3 responses with trade-offs, consequences, and
+  three-depth text. Approved analogues to seed: Mir fire (1997), Progress–Mir collision and
+  depressurization (1997), Apollo 13 oxygen tank failure (1970), Soyuz MS-22 coolant leak
+  (2022), August 1972 solar particle event, 2018 Mars global dust storm, ISS CO2 scrubber
+  failures. Add each to DATA_SOURCES.md as unverified; the team will supply sources. Use
+  placeholders for numbers — never invent them.
+- Component reliability: hourly failure hazard from TRL and maintenance state; repairs cost
+  spares and crew-hours and can fail.
+- Outcomes: SUCCESS (all crew safe, primary goal met), PARTIAL (crew safe, goal missed),
+  ABORT (Moon: return possible with a sourced transit time; Mars: only at a departure
+  window — make the player feel why), LOSS (crew lost; the mission continues if others
+  survive, otherwise ends).
+- Difficulty presets Training / Nominal / Flight-Rated as scenario parameters only.
+Balance harness (required):
+- Bots: idleBot (never acts), greedyBot (maximizes science, ignores margins), prudentBot
+  (scripted sensible play across all five stations).
+- 200 seeds per scenario × difficulty, headless. Targets:
+  idleBot success ≤ 5% (Nominal, Flight-Rated), ≤ 30% (Training);
+  prudentBot ≥ 85% Training, ≥ 70% Nominal, 40–60% Flight-Rated;
+  greedyBot between idleBot and prudentBot.
+  Every failure mode must appear in at least one idleBot or greedyBot seed.
+- Write docs/BALANCE.md (outcomes and failure causes per scenario and difficulty). Tune
+  only "tuned" constants and difficulty presets, never "measured" ones.
+Done when: balance targets pass in CI, each failure mode has a test, and the Black Box
+explains every LOSS and ABORT.
+- Read @docs/INCIDENTS_AND_THRESHOLDS_v2.md. Thirst, hunger and cold ARE lethal paths and
+  must be implemented as specified there, including the PIO2 conversion helper, the three
+  separate cold paths, and the per-path cause-of-death tests in Part 5.
+
+# M7.5 — Balance correction (before M8)
+1. Audit bot fairness: list every engine value prudentBot reads. Any value a human player
+   cannot see at the moment of decision must be hidden from the bots (sensor lag, warning
+   false-alarm rate, delayed Mission Control advice, crew-hour execution latency).
+   Re-run the harness and report the new numbers BEFORE tuning anything.
+2. Add residual cost to every incident response: consumed spares, crew-hours, added wear
+   (shortened MTBF), or dose. No response may restore the prior state.
+3. Add incident coupling: degraded state raises the probability and severity of the next
+   incident; improvised repairs shorten component life; storms drive EVAs which drive dose
+   and fatigue.
+4. Redefine Flight-Rated SUCCESS to require mission goals met (science returned, career
+   dose within limits, outpost operable at handover), not survival alone. Survival without
+   goals = PARTIAL.
+5. Reframe componentRiskBaseChancePerHour as MTBF hours per component (realistic band
+   2,000–20,000 h, TRL- and wear-scaled). The current 0.0045/h implies a 222-hour MTBF,
+   which no flight hardware resembles.
+6. Reclassify spe1972DoseMultiplier as "derived", with this note: Moon baseline
+   1.37 mSv/day × 1500 ≈ 86 mSv/h ≈ 0.5 Gy over 6 h, matching the measured statement that
+   a large unshielded SPE delivers >0.5 Gy over several hours [HRP-ARS].
+7. Attach existing source IDs to the reopened placeholders: CO2 IDLH 30.4 mmHg
+   [CO2-REVIEW-2026], ARS 0.1–0.2 / 2 / 3.25 Gy [HRP-ARS], dust tau 10.8 / 22 Wh [MER-TAU],
+   Mir fire 14 min [NASA-SP-4030].
+8. For the remaining incident magnitudes (Spektr leak rate, Apollo 13 CO2 rise, MS-22
+   temperature rise), mark them "tuned" and record in DATA_SOURCES.md the MEASURED OUTCOME
+   each is anchored to, not an invented rate.
+9. Re-run 200 seeds × scenario × difficulty and update docs/BALANCE.md. Report which of
+   steps 1–5 moved the Flight-Rated prudentBot rate, and by how much.
+Push and run `vercel build` first. Stop after step 1's report and after step 9.
+
+# M7.6 — Prove decision-dependence, then finish residual costs
+
+## A. Audit for hardcoded or decision-independent outcomes (report only, no fixes yet)
+1. Grep the engine for: literal success/failure rates, probability constants applied
+   directly to outcomes, any scenario or difficulty field that biases the OUTCOME rather
+   than the physics, Math.random, Date.now, and any RNG not the injected seeded one.
+2. Trace the outcome state machine: list every state variable SUCCESS / PARTIAL / ABORT /
+   LOSS is computed from, and for each one, name the decisions that can change it.
+   Report any outcome input that NO decision can influence.
+3. For each response option in the incident catalog, list which state variables it writes.
+   Flag every option that writes nothing, or writes only variables that no failure path or
+   outcome criterion reads. These are cosmetic decisions.
+Output: docs/DECISION_AUDIT.md. STOP and report before making changes.
+
+## B. Explain the identical success counts (this is the priority)
+4. For First Light and The Long Night, compare greedyBot and prudentBot SEED BY SEED, not
+   in aggregate: outcome per seed, failure cause per seed, and a hash of final state.
+   Report which of these holds:
+   (a) both 200/200 — scenario saturation, so those scenarios are too easy;
+   (b) counts equal but per-seed outcomes differ — coincidence, harmless;
+   (c) per-seed outcomes identical — DECISIONS DO NOT REACH THE OUTCOME. Treat as a
+       release-blocking bug and find the disconnect.
+   Do not proceed to C until this is answered.
+
+## C. Decision-sensitivity proof (do this before any further tuning)
+5. Counterfactual test: for every incident and every response option, run a seed to the
+   decision point, branch, take each option, and assert the final state hashes differ.
+   Any option producing no divergence fails the test. This is the release-blocking one.
+6. Add worstChoiceBot: acts on every decision, always picks the worst valid option.
+   Assert idleBot ≤ worstChoiceBot < greedyBot on every scenario and difficulty.
+   Note: do NOT assert greedyBot < prudentBot globally — The Long Night and First Light
+   show that aggression is correct on short, fixed-deadline missions. Assert the ordering
+   per scenario, from measured behaviour, and document why it differs.
+7. Decision-coverage report in docs/BALANCE.md: for each option, how often bots chose it
+   and its measured effect on the outcome distribution.
+8. Then M7.6 Part D (residual costs for fire-mir97, spe-1972, duststorm-2018,
+   scrubber-iss), then tuning.
+
+## D. Residual costs for the last four incidents (see docs/INCIDENT_MAGNITUDES.md pattern)
+9. INC-FIRE-MIR97: consumes extinguishers and respirator cartridges permanently; smoke
+   degrades air quality and crew performance for a recovery period (the Mir crew wore masks
+   for over 36 hours); damaged equipment stays damaged; cleanup costs crew-hours.
+10. INC-SPE-1972: dose is inherently permanent — verify cumulative career dose never resets
+   and counts toward the 600 mSv mission-failure criterion. Sheltering costs crew-hours,
+   halts science and EVA, and interrupts crop light. Electronics take a degradation roll.
+11. INC-DUSTSTORM-2018: dust accumulation on arrays is PERMANENT and cumulative (InSight
+    declined over years; cleaning is not free). Cleaning EVAs cost crew-hours and dose.
+    Deep battery discharge cycles permanently reduce usable capacity.
+12. INC-SCRUBBER-ISS: a repaired bed runs at reduced capacity for the rest of the mission;
+    spares are consumed; cumulative CO2 exposure above 3 mmHg is tracked and carries
+    lasting performance cost, not just momentary.
+13. Re-run 200 seeds × scenario × difficulty and report the new Flight-Rated prudentBot
+    rate against the 40–60% target. Report which change moved it and by how much.
+Do not tune any hazard rate until A–D are done.
+
+# M7.7 — Make scarcity real (blocks C and D)
+
+## 1. Crew-hours become a real budget (the core fix)
+- Every crew member has a daily crew-hour budget from constants: sleep, personal time,
+  exercise, and NASA's 5-day workweek with 2 days off [BVAD-2022] come out first; what
+  remains is assignable.
+- Deduct crewHoursCost for EVERY action that declares it: repairs, EVAs, farming,
+  science, cleaning, ISRU, incident responses. If insufficient hours remain, the option is
+  UNAVAILABLE or must displace other work — surface that in the Decision Card.
+- Work queued beyond the day's budget slips to the next sol. Slippage is how a small fault
+  becomes a cascade, and it must be visible in the Black Box.
+- Overtime is allowed but raises fatigue, which lowers repair success and raises error
+  rates. No free labour anywhere.
+
+## 2. Spares become real everywhere
+- Enforce sparesCost on EVERY response that declares one, not one of three. Audit all
+  responses for undeclared consumption.
+- Spares are finite, set at Launch Packing, and cannot be manufactured (unless a scenario
+  grants a printer, which then costs power and crew-hours).
+- If spares are exhausted, repairs use improvisation: lower success probability, and a
+  permanent efficiency penalty on the repaired component (see Apollo 13's degraded
+  scrubber in docs/INCIDENT_MAGNITUDES.md).
+
+## 3. Wire the Station model into the simulation (it has zero callers today)
+- stationPerformance must gate: incident-response success probability, repair duration,
+  detection delay for new faults, and decision quality aids at the relevant station.
+- availableCrewHours must be the SAME budget as item 1 — one source of truth, not two.
+- stationCoverer: a crew member covering two stations gets the documented fatigue penalty
+  and reduced performance at both.
+- Crew condition (impaired / critical) must reduce their station's performance, per the
+  brief's Station rule. Add a test: an impaired Power officer measurably worsens outcomes
+  versus a nominal one on the same seed.
+
+## 4. Remove the hardcoded outcome
+- jezero-outpost primaryGoal currently returns true unconditionally. Replace with real
+  criteria: science objectives completed, crew career dose within limits, outpost operable
+  at handover, all crew alive.
+- Wire Scenario.stretchGoal into scoring (it is read nowhere).
+- This unblocks M7.5 step 4: on Flight-Rated, survival without goals = PARTIAL, not SUCCESS.
+
+## 5. Kill or justify the three magic numbers in events.ts
+- The 15%/hour auto-repair must go. Nothing should repair itself regardless of the chosen
+  response — it silently erases the consequence the decision was supposed to create.
+  Replace with crew-performed repair that costs crew-hours and spares and can fail.
+- For the other two: either source them, derive them from something measured, or reclassify
+  them as "tuned" with a note in BALANCE.md. No unexplained constants in events.ts.
+
+## 6. Make ABORT reachable
+- Define explicit abort criteria and expose ABORT as a Mission Command decision whenever
+  they are met: crew critical with no repair path, consumables below the margin needed to
+  reach the next resupply, cumulative dose approaching the 600 mSv limit, or habitat
+  integrity lost.
+- Moon: about 6 days transit [NASA-ORION-FS]. Mars: only at a departure window
+  (~780-day synodic period) — the player must feel the wait.
+- Teach the bots to abort: prudentBot aborts when survival probability falls below a
+  threshold; greedyBot aborts too late; idleBot never aborts. Add a test asserting ABORT
+  occurs in at least one seed per scenario.
+- Scoring: a timely abort that saves the crew scores PARTIAL and beats LOSS. Surviving is
+  a legitimate win condition, and that is a real lesson in mission design.
+
+## 7. Fix the cosmetic decision
+- o2tank-apollo13's rationActivity must write real state: reduced crew metabolic rate and
+  CO2 production, at the cost of crew-hours available for work. Then re-run C's
+  counterfactual test on it.
+
+## 8. Re-baseline and report
+- Re-run 200 seeds × scenario × difficulty for all bots. Expect large movement; prudentBot
+  was ranking options by a price that was never charged.
+- Report: new outcome distributions, how often options became UNAVAILABLE due to crew-hours
+  or spares, ABORT frequency, and how often work slipped to the next sol.
+- Only then proceed to M7.6 part C (counterfactual tests, worstChoiceBot) and part D
+  (residual costs for the last four incidents).
+- Do not tune any hazard rate until after C and D.
+
+# M7.8 — Diagnose before tuning
+
+## A. Explain the First Light inversion (report only, no changes)
+1. For seeds where greedyBot succeeds and prudentBot fails, produce a decision-level diff:
+   where the strategies diverged, what each spent, and the Black Box cause of prudent's
+   failure. Classify each loss: (a) prudent spent crew-hours on work that never paid off
+   within 30 sols; (b) prudent sheltered/deferred on warnings a 2-person crew cannot
+   afford; (c) prudent hoarded spares it never used; (d) something else.
+2. Same analysis for Flight-Rated at 13%: is prudentBot failing on resources, dose, goals,
+   or crew loss? Give the distribution of failure causes, not just the rate.
+3. State plainly whether prudentBot's strategy is wrong for short missions, or the
+   scenarios are mistuned. Do not change scenario parameters in this step.
+
+## B. Fix the strategy if that is the finding
+4. prudentBot should adapt to mission duration: preventive work and margin-hoarding pay off
+   over hundreds of sols and may be actively wrong over 30. Make its policy duration-aware,
+   and document the policy in docs/BALANCE.md so it is not a black box.
+5. Re-run and report before any scenario tuning.
+
+## C. Re-examine two M7.7 fixes
+6. sealModule survivability: with the ~50% power loss, is there a decision path that
+   survives (load shedding, reduced activity, abort)? If not, add one — the Mir cost is
+   correct and must be survivable through good play, not only avoidable. Then reconsider
+   whether Jezero/First Light should carry 1 thermalControl spare rather than 2, so at least
+   one scenario forces living with an unaffordable option. Report the trade, do not decide
+   alone.
+7. Jezero primaryGoal: restore mission-accomplishment criteria — science objectives returned
+   and crew career dose within limits — alongside survival, while keeping the
+   every-system-operational clause removed. Survival alone should score PARTIAL on
+   Flight-Rated, per M7.5 step 4.
+
+## D. Only then
+8. Tune scenario parameters (starting margins, incident frequency, warning time) to reach
+   the targets. Tuned constants only; never "measured" ones. Log every change in BALANCE.md
+   with its before/after effect.
+9. Proceed to M7.6 C (counterfactual tests, worstChoiceBot) and D (residual costs for
+   fire-mir97, spe-1972, duststorm-2018, scrubber-iss).
+
+## M8 — Agency: sol loop, station consoles, decisions, briefing, onboarding
+- Core loop: Sol Planning (paused, station by station) → run the sol (1× / 4× / 16×) →
+  auto-pause on any incident or threshold crossing → Decision Card at the owning station →
+  end-of-sol summary (3 lines max, one per station that acted).
+- Planning controls by station: Power (priorities, reactor/array settings, dust cleaning),
+  Life Support (rations, ISRU, crop tasks), Comms (downlink priority, message queue),
+  Incident Command (repair queue, EVA go/no-go, shelter order), Mission Command (crew
+  assignment, daily plan, goals).
+- Decision Cards: 2–3 options, trade-offs shown at the current dial depth, a countdown in
+  game time for urgent incidents, the owning station named, and a stated default
+  consequence if the player does not choose.
+- Mission Control messages arrive after the real light-time. On Mars, urgent problems must
+  be solved before Earth can answer, and the game says so.
+- Mission Briefing before every mission: crew names, roles and stations; duration; landing
+  site; the hazard coming (scenario + Live Sky); primary goal; one stretch goal; what
+  failure looks like. Readable in under 90 seconds, with a Cadet version using icons.
+- Onboarding: first launch runs the "First Light" tutorial with coach marks, introducing
+  one station at a time (Power → Life Support → Incident → Comms → Command). A "?" on every
+  gauge explains it at the current depth.
+- Replace the seven-tab IA with the five station consoles plus Briefing and Debrief.
+  Propose the navigation in the M8 plan before building it.
+Done when: a new player makes a first meaningful decision within 60 seconds, a prudent
+human reaches SUCCESS, and an idle one cannot.
+
+## M9 — Mission setup + space-themed visualization
+- Setup flow: scenario → difficulty → crew size 2–6 (consumption scales; with fewer crew,
+  one person covers two stations, with the fatigue penalty) → landing site → power
+  architecture (solar + battery / fission / hybrid) → shielding approach → Launch Packing.
+- Landing-site picker on the Trek maps, using ONLY docs/LANDING_SITES.md. Show each site's
+  trade-offs (sunlight, ice, radiation, comms, terrain) with confidence flags, and never
+  present a placeholder as a fact.
+- Visualization: animated habitat cutaway; crew sprites move to their assigned stations and
+  tasks; day/night lighting on the real sol or lunar-day cycle; dust-storm overlay tied to
+  optical depth; red-alert lighting and a shelter animation during particle events;
+  depressurization shown with warning lights and alarms, never gore; starfield sky, Earth in
+  the lunar sky, Mars sky color shifting with dust.
+- Mission-control styling: mission elapsed time and sol clock, telemetry-style station
+  panels, alarm banner with severity levels. Original art only. ART DIRECTION IS PENDING:
+  use a neutral dark mission-control palette from existing design tokens, keep all visual
+  style in one theme module, and ask me before committing to a distinctive look.
+- Rendering: SVG first; ask before adding PixiJS.
+- AUDIO: not now. Leave a muted, empty audio hook and no asset files.
+Done when: 30+ FPS in the Lighthouse mobile profile, low-power mode works, reduced motion
+honored.
+
+# M9.3 — Historical Crisis Replay (new scenario type)
+
+## Goal
+Add a "Crisis Replay" mode: the player drops into a real documented spaceflight emergency
+at its moment of onset, with historically sourced parameters, and the debrief compares
+their solution to what actually happened.
+
+## Hard rules
+1. REUSE EVERYTHING. Crisis replays are scenarios with a new entry mechanism. No new
+   engine code, no new physics, no new station logic. If something requires an engine
+   change, STOP and ask.
+2. Every parameter in a crisis scenario file must cite a source ID from DATA_SOURCES.md,
+   or be marked "tuned" with a note. No undocumented numbers.
+3. The "What Actually Happened" debrief panel must state its source explicitly in the UI.
+   NASA historical mission data is being presented as fact; it must be attributed.
+4. Crisis Replay is a standalone entry point, not the default. The existing scenarios
+   and setup flow are unchanged.
+
+## New types (packages/sim/src/data/crisisScenario.ts)
+```ts
+interface CrisisScenario extends Scenario {
+  entryState: Partial<BaseState>;   // world at the moment of onset
+  crisisOnsetDescription: string;   // i18n key
+  historicalOutcome: {
+    summary: string;                // i18n key
+    keyMetric: { label: string; playerValue: () => number; historicalValue: number; unit: string; };
+    resolution: string;             // what actually happened, i18n key
+    sourceId: string;               // DATA_SOURCES.md ID
+    nasaLink: string;
+  };
+  availableMaterials: string[];     // spares/resources actually available at crisis onset
+  crisisMaxDurationHours: number;   // auto-ends after this if unresolved
+}
+```
+
+## The three crisis files
+
+### crisis-apollo13-co2.ts
+- Onset: 3 crew, LM at ~56 hours elapsed, O2 stores at documented crisis level
+- Scrubber capacity: 2/3 of required (two crew rated, three crew present, 4-day return)
+- CO2 at onset: 3.8 mmHg and rising; peak historical: 15 mmHg [A13-CO2]
+- Rise rate: derived from 3× demand on 1× capacity, anchored to 15 mmHg peak timing
+- Available materials: hose from pressure suit, plastic bags, cardboard, duct tape, sock
+  (model as spares with specific IDs; the improvised fix consumes them)
+- Historical outcome: ppCO2 held below 2 mmHg after fix [A13-CO2]
+- keyMetric: peak ppCO2 during the player's run vs. 15 mmHg historical
+- Duration: ~4 hours game time (the real fix took several hours)
+- Source: A13-CO2, OCHMO-TB-004
+
+### crisis-spe-1972.ts
+- Onset: 2 crew on EVA, 1 in habitat; real warning window 30–90 minutes or zero
+  (seed-driven: 30% chance of no usable warning, matching measured false-alarm rates)
+- Dose rate: spe1972DoseMultiplier applied to Moon baseline [HRP-ARS]
+- EVA crew: receive multiplied dose every minute they stay outside
+- Habitat crew: receive attenuated dose based on shielding level at mission setup
+- Choices: immediate EVA recall (6 min return, costs EVA objectives),
+  shelter EVA crew in suit storm shelter (partial protection), continue EVA (full exposure)
+- Historical outcome: no crew was actually exposed — the event occurred between Apollo
+  missions. Show what the modeled dose would have been. [HRP-ARS, NASA-TP-3643]
+- keyMetric: crew peak acute dose vs. 250 mSv per-event limit
+- Source: HRP-ARS, CE4-LND-2020, OCHMO-RAD
+
+### crisis-mir-fire.ts
+- Onset: Incident Command station; Kvant-1 module; oxygen candle active
+- Burn duration: 14 minutes [NASA-SP-4030] (note dispute with 90-second alternative)
+- Smoke degrades air quality for 45 minutes post-burn [NASA-SMA-MIR-COLLISION]
+- Resources: 3 extinguishers, respirators (one faulty — random which one, seeded)
+- Choices: fight fire immediately (risk faulty mask), seal the module (lose its O2 supply),
+  evacuate and let it burn out (atmosphere contamination)
+- Historical outcome: crew used all 3 extinguishers over 14 minutes; dense smoke for
+  45 minutes; station survived [NASA-SP-4030]
+- keyMetric: minutes to fire suppression vs. 14 minutes historical
+- Source: NASA-SP-4030, NASA-SMA-MIR-COLLISION
+
+## Entry flow (new route: /crisis)
+- A card per crisis: declassified-looking briefing with date, crew names, opening line.
+  No difficulty selector — these are historical events, not adjustable scenarios.
+- Reality Dial is available and controls presentation as normal.
+- "Begin Crisis" → drops directly into the Operate view at the crisis onset state.
+- Sol clock replaced by elapsed time from crisis onset (HH:MM).
+
+## Debrief additions (CrisisDebriefPanel.tsx)
+- Render AFTER the existing Black Box panel, not instead of it.
+- "What Actually Happened" section: historicalOutcome.resolution text, source link,
+  NASA link as a button labeled "Read the original report."
+- Key metric comparison: one large visual — player's value vs. historical value, with a
+  one-line interpretation ("You solved it faster than the real crew" or "CO2 peaked
+  8 mmHg higher than the historical fix achieved").
+- AI Mission Director prompt for crisis scenarios adds: "The player just replayed the
+  [Apollo 13 CO2 / 1972 solar storm / 1997 Mir fire] crisis with real historical
+  parameters. Compare their decisions explicitly to what the real crew did. Name the
+  specific moment where their approach diverged. Be direct."
+
+## i18n
+All new strings go through en and bn keys. The historical outcome text is EN only in this
+milestone; mark needsReview: true in the bn file.
+
+## Tests
+- Unit: entryState correctly initialises crisis parameters for all three scenarios.
+- Unit: CO2 rises at the documented rate and peaks within ±2 mmHg of 15 mmHg with no
+  player intervention on apollo13 crisis.
+- Unit: SPE dose exceeds 250 mSv for unshielded EVA crew with no recall on spe-1972.
+- e2e: complete apollo13 crisis, assert CrisisDebriefPanel renders with historical text
+  and source link.
+- e2e: complete apollo13 crisis with a successful fix, assert keyMetric shows player
+  value below 15 mmHg historical.
+
+## Order of work
+1. CrisisScenario type and the apollo13 crisis file. 2. Entry flow and Operate view
+   with elapsed time clock. 3. CrisisDebriefPanel with key metric and source link.
+   STOP — show me one working crisis before building the other two.
+4. spe-1972 and mir-fire files. 5. AI Mission Director prompt update. 6. i18n keys. 7. Tests.
+
+Report: any parameter that required a new constant (add to constants.ts with source),
+any engine change that was tempting but avoided, and the total new lines of code
+(should be under 600 excluding scenario data files).
+
+# M9.4 — Mission Scoring System
+
+## Goal
+A deterministic 0–100 scoring engine that evaluates a complete mission log and produces a
+structured score with per-category breakdowns, highlighted moments, and a percentile
+rank against the existing bot baseline runs.
+
+## Hard rules
+1. PURE FUNCTION. The scoring engine lives in packages/sim/src/engine/scoring.ts and has
+   zero side effects, zero imports from React, and zero access to external state.
+   Input: MissionLog + FinalState + ScenarioDefinition + Difficulty.
+   Output: MissionScore (typed, documented).
+2. DETERMINISTIC. Same log = same score always. No randomness, no Date.now().
+3. EVERY deduction and bonus must produce an explanatory string at all three Reality Dial
+   depths. The explanation string is a key into the i18n file, not a hardcoded sentence.
+4. NO new engine behavior. The scorer reads the existing event log; it does not write to
+   it or change how events are generated.
+5. The bot baseline distributions are precomputed and committed as
+   apps/web/public/scoring/baselines.json — never computed at runtime.
+
+## Types (packages/sim/src/engine/scoring.ts)
+```ts
+interface ScoreComponent {
+  id: 'outcome' | 'margin' | 'decision' | 'efficiency' | 'welfare';
+  label: string;                    // i18n key
+  score: number;                    // 0–max
+  maxScore: number;
+  events: ScoreEvent[];             // what drove this component
+}
+interface ScoreEvent {
+  sol: number; hour: number;
+  delta: number;                    // positive = bonus, negative = deduction
+  reason: string;                   // i18n key
+  causalEventId?: string;           // links to the Black Box log entry
+  depth: 'all' | 'specialist' | 'commander';
+}
+interface HighlightedDecision {
+  sol: number; station: string;
+  chosenOption: string; alternativeOption: string;
+  netEffect: number;                // positive = good call, negative = bad call
+  explanation: string;              // i18n key
+}
+interface MissionScore {
+  total: number;                    // 0–100, rounded to 1 decimal
+  grade: 'A+' | 'A' | 'B' | 'C' | 'D' | 'F';
+  components: ScoreComponent[];
+  bestDecision: HighlightedDecision;
+  costliestDecision: HighlightedDecision;
+  percentile: number;               // against bot baseline for this scenario + difficulty
+  baselineComparison: {
+    prudentBotMedian: number; greedyBotMedian: number; idleBotMedian: number;
+  };
+  isCrisisReplay: boolean;
+}
+```
+
+## Scoring logic (implement exactly as specified)
+
+### 1. Outcome (30 pts)
+Read outcome from FinalState.missionOutcome and ScenarioDefinition goals:
+- SUCCESS + all stretch goals: 30
+- SUCCESS + all primary goals: 24
+- SUCCESS + >50% primary goals: 18
+- SUCCESS + no goals: 10
+- ABORT, crew safe, before 20% of mission elapsed: 16
+- ABORT, crew safe, after 20% elapsed: 8
+- LOSS, at least one survivor: 3
+- LOSS, no survivors: 0
+
+### 2. Safety Margin (25 pts, penalty model)
+Scan the full event log chronologically. Accumulate penalties:
+- O2 below warning threshold: 0.1 per hour
+- CO2 above 3 mmHg: 0.08 per hour; above 7.6 mmHg: 0.15 per hour
+- Water below 5% of daily requirement: 0.1 per hour
+- Battery at 0%: 5 per event
+- Any crew member in 'critical' condition: 3 per crew member (once, not per hour)
+- Cumulative dose above 400 mSv (any crew member): 4 per crew member
+- Mode 1 rationing active: 0.05 per hour; mode 2: 0.15 per hour
+Final score = max(0, 25 − total_penalties). Penalties above 25 floor at 0.
+
+### 3. Decision Quality (25 pts)
+For each incident response in the log (type: 'incidentResponse'):
+  Look up the incident's response catalog. Compute the counterfactual: what would the
+  default response have cost? Compare to chosen response's actual downstream cost
+  (traceable via causalEventId chain in the log).
+  - Chosen outcome cost < default cost: +2
+  - Chosen outcome cost ≈ default cost (within 10%): +1
+  - Chosen outcome cost > default cost: 0
+  - Timer expired (chosenResponseId = 'default'): −1
+
+Proactive bonus (scan the planning log, type: 'solPlanUpdate'):
+- Power priority updated in the sol BEFORE a brownout event: +1 (max 5)
+- Ration level reduced in the sol BEFORE a critical resource warning: +1 (max 3)
+- Maintenance task scheduled in the sol BEFORE a failure event on that component: +2 (max 4)
+- EVA cleared as 'no-go' in the sol BEFORE an SPE event: +2
+- Crew sheltered before SPE confirmation (not after): +2
+Cap total decision score at 25.
+
+### 4. Resource Efficiency (10 pts)
+Start at 10. Deduct:
+- Each improvised repair (spares insufficient, penalty applied): −0.5
+- Each failed repair attempt (spares consumed, component still failed): −1
+- End-of-mission food surplus > 20% of initial stores: −1
+  (you could have packed more science; label this "over-provisioned" not "waste")
+- Each spare part consumed on a repair that itself failed within 10 sols: −0.5
+Floor at 0.
+
+### 5. Crew Welfare (10 pts)
+- Average crew morale across all crew and all hours, normalized 0–1: × 4
+- No crew member exceeding overtimeCeilingFractionOfAverage for more than 48 consecutive
+  hours: 3 pts (pro-rated: −1 per crew member who exceeded it)
+- No crew member entering 'impaired' state from a PREVENTABLE cause: 3 pts
+  (preventable = caused by a player planning decision, per causalEventId chain;
+   unavoidable = caused by an incident with no prior warning)
+Floor at 0.
+
+## Highlighted decisions
+bestDecision: the ScoreEvent with the highest positive delta in component 'decision'.
+costliestDecision: the ScoreEvent with the lowest (most negative) delta across ALL components,
+linked to a player action (not an environmental event). Must have a causalEventId.
+If tied, prefer the event with the longest downstream causal chain in the log.
+
+## Percentile computation
+Load apps/web/public/scoring/baselines.json (precomputed). Find the bucket for
+[scenario.id, difficulty]. The player's total falls somewhere in the distribution of
+200 bot scores. Return Math.round((rank / 200) * 100). Also return the three bot medians.
+
+Write scripts/score-baselines.ts: runs all bot logs from the existing balance harness
+through the scoring engine and writes baselines.json. I run this script; it is not
+run at runtime. It must be re-run whenever the scoring engine changes.
+
+## Grade mapping
+90–100: A+ · 80–89: A · 70–79: B · 60–69: C · 45–59: D · 0–44: F
+On a LOSS outcome, cap at C regardless of component scores.
+
+## Crisis Replay scoring (separate ScenarioCrisisScore type)
+- Resolution speed (40): score = 40 × (1 − playerMinutes / crisisMaxDurationHours × 60)
+  Floor at 0. If player exceeds maxDuration, score 0 on this component.
+- Peak hazard (30): score = 30 × (1 − playerPeakMetric / lethalThreshold)
+  For apollo13: playerPeakCO2 / 30.4 mmHg. For spe-1972: playerPeakDose / 3000 mGy.
+  Floor at 0.
+- Resources conserved (20): score = 20 × (sparesRemaining / sparesAtOnset)
+- Crew condition (10): all nominal = 10; one impaired = 6; one critical = 2; any lost = 0
+Include a historicalComparison block mirroring the player's key metric against the
+documented historical value (not a score, just a display field).
+
+## ScoreCard component (apps/web/src/components/debrief/ScoreCard.tsx)
+- Renders above the Black Box panel, not instead of it.
+- Large total score, grade, and star rating (1–5 stars, mapped from grade).
+- Five horizontal bars, one per component, with icon and score/max.
+- percentile line: "Better than X% of [difficulty] [scenario] runs"
+- Bot comparison: one line naming which bot level you exceeded.
+- bestDecision and costliestDecision blocks, each with sol, station, and the
+  explanation string at the current Reality Dial depth.
+- Cadet depth: emoji icons, star rating, two highlighted decisions in plain language.
+- Specialist: numerical scores per category, plain labels, the two decisions.
+- Commander: all of the above plus the raw penalty events listed per category,
+  each linking to its Black Box entry.
+- Score is included in the mission report (M10) and the seeded URL's metadata.
+
+## AI Mission Director integration
+Pass the MissionScore to the existing mission-debrief API function alongside the mission
+log. Add to the system prompt: "The player scored [total]/100 with breakdown [components].
+Their best decision was [bestDecision.explanation]. Their costliest was
+[costliestDecision.explanation]. Their percentile is [percentile]%. Reference the score
+components specifically in your analysis — don't just describe what happened, say what
+the numbers mean about their strategy."
+
+## i18n
+All ScoreEvent reason strings are i18n keys. Add en entries for all of them now.
+Mark bn entries needsReview: true — M11 handles translation.
+
+## Tests
+- Unit: idle player (no decisions, no proactive tweaks) scores 0 on decision quality,
+  scores max penalty on safety margin, and produces a valid MissionScore.
+- Unit: a log with zero planning updates scores 0 proactive bonuses.
+- Unit: the best and costliest decisions are always linked to player actions, never
+  to environmental events.
+- Unit: grade never exceeds C on a LOSS outcome regardless of component scores.
+- Unit: crisis replay — Apollo 13 with CO2 held below 5 mmHg and all spares used
+  scores above 70.
+- Unit: score-baselines.ts produces valid JSON with the correct schema when run.
+- e2e: complete First Light, assert ScoreCard renders with a total, a grade, and
+  two highlighted decisions.
+- e2e: complete First Light twice with different strategies; assert scores differ.
+
+## Order of work
+1. scoring.ts with all five components and MissionScore type. Unit tests.
+2. scripts/score-baselines.ts. I run it and commit baselines.json.
+3. ScoreCard component (Specialist depth first, then Cadet and Commander).
+4. Crisis Replay ScenarioCrisisScore.
+5. AI Mission Director integration.
+6. i18n keys.
+STOP after step 1 and show me the MissionScore type and three sample outputs
+(idle player, prudent player, greedy player on Jezero Nominal).
+
+## M10 — Shareable seeded runs + mission report
+- URL encodes SIM_VERSION, scenario, difficulty, crew size, site, power choice, seed;
+  optionally the compressed input log in the fragment for exact replay (ask before adding a
+  compression dependency). A SIM_VERSION mismatch shows "made with an older version"
+  instead of breaking.
+- Class mission: "Create class link" on setup. Every student gets the identical mission.
+  No backend, no accounts, no personal data.
+- Mission report: one printable page (print CSS → browser print to PDF): outcome, crew and
+  their stations, site, decision timeline tagged by station, the Black Box causal chain, one
+  "What NASA did" card, replay link, data-sources footer. Bilingual.
+- Replay: opening a report link replays the run's decisions at speed.
+Done when: two browsers opening the same link produce byte-identical final states (test).
+
+## M11 — Bangla completion + release hardening
+- Translate the remaining five screens, all station consoles and the three-depth event-log
+  text into Bangla as DRAFT (needsReview: true). Export docs/i18n/bn_review.csv plus an
+  import script; a native reviewer will come later.
+- i18n completeness test: no missing keys in en or bn.
+- docs/DEVICE_TEST.md checklist and a ?debug=1 overlay (FPS, memory, tick time).
+- Data Sources screen shows every new source and its honest verification status.
+- Feature freeze after M11: bug fixes only.
+
+## Schedule
+M7 09-22→23 · M8 09-23→24 · M9 09-24→25 · M10 09-26 · M11 09-26→27 · submit 09-27.
+Scope is fixed. If a milestone will not fit, stop and ask me (principle 10).
+
+## Start now
+M7 in plan mode. Propose: the physiology model and thresholds; the station model and how
+crew condition degrades each station; the incident schema and initial catalog with owning
+stations; the outcome state machine; the three bot strategies; and the balance harness.
+List every new constant with a proposed source or "placeholder", and list the terminology
+renames you will make. Wait for my approval.
