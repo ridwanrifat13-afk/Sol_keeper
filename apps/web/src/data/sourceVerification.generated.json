@@ -1,0 +1,205 @@
+{
+  "A13-CO2": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "AGU-KNIPP-2018": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "AIP-2023-REGOLITH-SHIELD": {
+    "verified": false
+  },
+  "BVAD-2022": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "CE4-LND-2020": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "FRONTIERS-2024": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "GAME-DESIGN": {
+    "verified": true
+  },
+  "GSFC-STD-1000H": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "HRP-ARS": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "ICES-2017": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "ICES-2019-CDRA": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "JPL-DUSTSTORM2018-TAU": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "LORENZ-2020-INSIGHT-DUST": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "LUZZI-2025": {
+    "verified": false
+  },
+  "MIR-FIRE-LINENGER": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "MIT-16851-WRS": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "MIT-MOXIE-2023": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "MIYAJIMA-LSS": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "MOXIE-MASS-NASA": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "MS22-THERMAL": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "MSL-RAD-CRUISE": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "MSL-RAD-SUMMARY": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "MSL-RAD-SURFACE": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "NASA-AMES-STD8070": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "NASA-AMF-RATCHET": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "NASA-ARTEMIS-CLR": {
+    "verified": false
+  },
+  "NASA-FSP": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "NASA-FSP-IAC2024": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "NASA-HYPOTHERMIA-2008": {
+    "verified": false
+  },
+  "NASA-M2020-LANDING": {
+    "verified": false
+  },
+  "NASA-MIR-FIRE-25YR": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "NASA-MSL-LANDING": {
+    "verified": false
+  },
+  "NASA-NUTRITION-2015": {
+    "verified": false
+  },
+  "NASA-ORION-FS": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "NASA-SHUTTLE-MIR": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "NASA-SMA-MIR-COLLISION": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "NASA-SP-4030": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "NASA-SPACEBIO-1975": {
+    "verified": false
+  },
+  "NASA-TP-3643": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "NASA-WATER-2023": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "NSF-MS22": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "NSSDC-FACTS": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "NTRS-LUNAR-MAINT-CREWTIME": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "OCHMO-RAD": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "OCHMO-TB003": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "OCHMO-TB004": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "OCHMO-TB047": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "RUCKER-2015-SURFACE-POWER": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "SPACECRAFT-SUBSYS-NTRS": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "STOICHIOMETRY": {
+    "verified": true
+  },
+  "SWIM-2021": {
+    "verified": false
+  },
+  "THEMIS-MARGINS": {
+    "verified": true,
+    "verifiedBy": "TR 2026-11-02"
+  },
+  "WHEELER-2024-CO2-SALAD": {
+    "verified": false
+  },
+  "WUELLER-2026": {
+    "verified": false
+  }
+}
