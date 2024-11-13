@@ -1,0 +1,351 @@
+{
+  "shareLink": {
+    "versionMismatch": "This link was made with an older version of Sol Keeper and can't be replayed here — starting a fresh mission instead.",
+    "invalid": "This link isn't valid — starting a fresh mission instead.",
+    "dismiss": "Dismiss",
+    "createClassLink": "Create class link",
+    "classLinkHint": "Every student who opens this link gets the identical mission — same scenario, same seed, same incidents. No accounts, no backend: the whole mission lives in the link itself.",
+    "copyReportLink": "Copy report link",
+    "copied": "Copied!",
+    "linkLabel": "Shareable mission link"
+  },
+  "report": {
+    "title": "Mission Report",
+    "back": "Back",
+    "printHint": "Use your browser's Print (Ctrl/Cmd+P) to save this report as a PDF.",
+    "replayControlsLabel": "Replay speed",
+    "replayingLabel": "Replaying —",
+    "disclosureNote": "This page's headings and labels, plus the station names, decision details, and event descriptions below, are all shown in your chosen language. Bangla text is a first-pass draft awaiting a native reviewer.",
+    "runSignature": "Run signature",
+    "titleSuccess": "Mission complete",
+    "outcomeSuccess": "{{duration}}, {{living}} of {{crew}} crew home safe.",
+    "titlePartial": "Mission ended — goal not met",
+    "outcomePartial": "Crew safe, but the mission's goal was missed. Ended at {{timestamp}}.",
+    "titleAbort": "Mission aborted",
+    "outcomeAbort": "The crew chose to abort. Ended at {{timestamp}}.",
+    "titleLoss": "Mission lost",
+    "outcomeLoss": "Ended at {{timestamp}}.",
+    "titleRunning": "Mission in progress",
+    "outcomeRunning": "Replayed to {{timestamp}} — {{living}} of {{crew}} crew alive so far. The mission was still running when this link was made.",
+    "crewHeading": "Crew and stations",
+    "crewName": "Name",
+    "crewStatus": "Status",
+    "crewAlive": "Alive",
+    "crewLost": "Lost",
+    "primaryStation": "Primary station",
+    "backupStation": "Backup station",
+    "siteHeading": "Landing site",
+    "bodyMars": "Mars",
+    "bodyMoon": "the Moon",
+    "decisionsHeading": "Decision timeline",
+    "decisionsEmpty": "No player decisions were recorded for this run.",
+    "causalChainHeading": "Black Box causal chain",
+    "causalChainHint": "Every entry below is one the engine recorded as the cause of at least one other entry — the causal chain is real, not inferred after the fact.",
+    "causalChainEmpty": "No incident on this run triggered a recorded chain.",
+    "whatNasaDidHeading": "What NASA did",
+    "whatNasaDidEmpty": "No incident on this run drew on a real NASA analogue.",
+    "replayHeading": "Replay this mission",
+    "replayHint": "Anyone who opens this link gets the exact same mission, replayed to this exact point — same scenario, same seed, same incidents.",
+    "dataSourcesHeading": "Data sources",
+    "dataSourcesHint": "Every number in this simulation cites a NASA or peer-reviewed source. See the in-app Data Sources screen for the full list.",
+    "notAffiliated": "Not affiliated with or endorsed by NASA. Sol Keeper carries no NASA logo, insignia, or \"meatball\"."
+  },
+  "tabs": {
+    "nav": "Sol Keeper views",
+    "power": "Power",
+    "lifeSupport": "Life Support",
+    "comms": "Comms",
+    "incidentCommand": "Incident Command",
+    "missionCommand": "Mission Command",
+    "habitat": "Habitat",
+    "crisis": "Crisis Replay",
+    "briefing": "Briefing",
+    "debrief": "Debrief",
+    "dataSources": "Data Sources",
+    "dataPassport": "Data Passport",
+    "debriefReady": "ready"
+  },
+  "badge": {
+    "loading": "Loading…",
+    "live": "Live",
+    "snapshot": "Snapshot",
+    "snapshotWithDate": "Snapshot ({{date}})",
+    "historical": "Historical event",
+    "historicalWithDate": "Historical event ({{date}})",
+    "archived": "Archived reference data"
+  },
+  "liveSky": {
+    "title": "Live Sky",
+    "hint": "Real data from NASA's own space-weather and navigation feeds — not simulated, and labeled so you always know whether you're looking at this moment or a saved one.",
+    "distanceHeading": "Distance to Earth",
+    "distanceLine": "{{km}} km from Earth to {{body}} right now",
+    "radioDelay": "A radio message takes {{oneWay}} minutes to arrive one way — {{roundTrip}} minutes for mission control to hear a reply.",
+    "distanceLoading": "Loading the current Earth distance…",
+    "bodyMars": "Mars",
+    "bodyMoon": "the Moon",
+    "activityHeading": "Recent solar activity",
+    "hintHistorical": "No solar activity in the live window right now — here's a real storm from NASA's records instead.",
+    "hintLive": "The same real solar flares and storms that could trigger a radiation-shelter Decision Card.",
+    "empty": "No events to show yet.",
+    "nasaRecord": "NASA record ↗"
+  },
+  "spaceWeatherType": {
+    "cadet": {
+      "FLR": "Solar flare",
+      "SEP": "Radiation burst",
+      "CME": "Solar storm cloud",
+      "GST": "Magnetic storm"
+    },
+    "technical": {
+      "FLR": "Solar flare",
+      "SEP": "Solar energetic particle event",
+      "CME": "Coronal mass ejection",
+      "GST": "Geomagnetic storm"
+    }
+  },
+  "scenario": {
+    "jezero": {
+      "briefing": {
+        "specialist": "A major dust storm arrives around sol 8, cutting solar power sharply for about two and a half days.",
+        "cadet": "Around day 8, a huge dust storm will block the sun for a couple of days."
+      }
+    },
+    "firstLight": {
+      "briefing": {
+        "specialist": "A solar particle event arrives early, around day 4 — the crew will need to shelter.",
+        "cadet": "Around day 4, a solar storm means everyone has to hide in the safe room."
+      }
+    },
+    "theLongNight": {
+      "briefing": {
+        "specialist": "A solar particle event arrives partway through the first lunar night, around day 6.",
+        "cadet": "Around day 6, deep in the first long night, a solar storm hits."
+      }
+    },
+    "greenThumb": {
+      "briefing": {
+        "specialist": "A 14-day lunar agricultural evaluation. Balance greenhouse power against survival needs to bring two crop trays to harvest.",
+        "cadet": "Grow fresh plants on the Moon for 14 days. Save battery power when it gets dark."
+      }
+    },
+    "stormWatch": {
+      "briefing": {
+        "specialist": "Replays the May 10, 2024 solar storm from NASA DONKI records (based on real solar activity). Intense proton flux begins at hour 13 with 73-minute onset warning — prepare the shelter and manage battery power.",
+        "cadet": "A big solar storm hits at day 1 (based on real solar activity). Move everyone inside the storm shelter."
+      }
+    }
+  },
+  "briefing": {
+    "title": "Mission Briefing",
+    "bodyMars": "Mars",
+    "bodyMoon": "the Moon",
+    "crewHeading": "Crew",
+    "backup": "backup",
+    "siteHeading": "Landing site",
+    "hazardHeading": "What to expect",
+    "goalsHeading": "Goals",
+    "primaryGoalLabel": "Primary goal",
+    "stretchGoalLabel": "Stretch goal",
+    "failureHeading": "What failure looks like",
+    "failure": {
+      "partial": {
+        "specialist": "The mission can end with the whole crew alive but the goal unmet — a real, distinct outcome from a crew loss, not a milder version of it.",
+        "cadet": "Everyone can make it home safe, but still not finish the mission's goal."
+      },
+      "abort": {
+        "specialist": "The crew can end the mission early, on purpose, if things are going badly enough — a real, deliberate call, not a failure of skill.",
+        "cadet": "You can decide to end the mission early to keep everyone safe."
+      },
+      "loss": {
+        "specialist": "If every crew member is lost, the mission ends immediately, whatever else was going right.",
+        "cadet": "If the whole crew is lost, the mission is over."
+      }
+    },
+    "massHeading": "Packed mass",
+    "massLine": "{{kg}} kg of hardware, packed with real PDR-phase margin (NASA Ames APR 8070.1) — see the full breakdown on Mission Command.",
+    "massLineCadet": "The ship is packing about {{kg}} kg of gear."
+  },
+  "solSummary": {
+    "heading": "{{timestamp}} complete",
+    "quiet": "A quiet sol — nothing significant to report.",
+    "quietCadet": "A quiet day — nothing big happened.",
+    "continue": "Continue to Sol Planning",
+    "continueCadet": "Continue to Day Planning"
+  },
+  "debrief": {
+    "notReadyHeading": "Debrief",
+    "notReadyHint": "The Black Box fills in once the mission ends — keep the outpost running.",
+    "notReadyHintCadet": "The Black Box tells the story of your mission. It shows up when the mission ends. Keep your outpost going!",
+    "titleSuccess": "Mission complete",
+    "outcomeSuccess": "{{duration}}, {{living}} of {{crew}} crew home safe.",
+    "outcomeSuccessCadet": "You did it! {{living}} of {{crew}} crew are home safe after {{duration}}.",
+    "titlePartial": "Mission ended — goal not met",
+    "outcomePartial": "Crew safe, but the mission's goal was missed. Ended at hour {{hour}} ({{timestamp}}).",
+    "outcomePartialCadet": "Everyone is safe, but the crew did not finish the goal. The mission ended at hour {{hour}} ({{timestamp}}).",
+    "titleAbort": "Mission aborted",
+    "outcomeAbort": "The crew chose to abort. Ended at hour {{hour}} ({{timestamp}}).",
+    "outcomeAbortCadet": "You chose to bring the crew home early. Real mission teams make this choice too. The mission ended at hour {{hour}} ({{timestamp}}).",
+    "titleLoss": "Mission lost",
+    "outcomeLoss": "Ended at hour {{hour}} ({{timestamp}}).",
+    "outcomeLossCadet": "The mission had to end at hour {{hour}} ({{timestamp}}). Let's see what happened and what you could try next.",
+    "viewReport": "View printable Mission Report",
+    "finalNumbersHeading": "Final numbers",
+    "oxygen": "Oxygen",
+    "water": "Water",
+    "food": "Food",
+    "battery": "Battery",
+    "harvested": "Harvested",
+    "isruOxygen": "ISRU oxygen",
+    "crewLostHeading": "Crew lost",
+    "crewLossWindowHint": "Conditions in the 3 days before — not a proven cause; health declines gradually across several models at once.",
+    "crewLossWindowHintCadet": "These things were happening in the 3 days before. They may not be the only reason. Sometimes many small problems add up.",
+    "crewLossNoConditions": "No severe conditions were logged in the preceding window.",
+    "incidentsHeading": "Major incidents ({{count}})",
+    "incidentsHint": "Every entry below is one the engine recorded as the cause of at least one other entry — the causal chain is real, not inferred after the fact. Runs of the same recurring incident (a brownout re-triggering as a dust storm's shortfall shifts hour to hour) are grouped into one row.",
+    "incidentsEmpty": "No incident on this run triggered a recorded chain.",
+    "timelineHeading": "Full mission log ({{count}})",
+    "recurred": " (recurred {{count}} times)",
+    "recurredShort": " (×{{count}})",
+    "directEffect_one": "direct effect",
+    "directEffect_other": "direct effects",
+    "totalDownstream": ", {{count}} total downstream",
+    "effectsAcrossOccurrences": "→ {{total}} effects across all {{count}} occurrences."
+  },
+  "scoring": {
+    "component": {
+      "outcome": "Mission Outcome",
+      "margin": "Safety Margin",
+      "decision": "Decision Quality",
+      "efficiency": "Resource Efficiency",
+      "welfare": "Crew Welfare"
+    },
+    "outcome": {
+      "successWithStretch": "Primary and stretch objectives completed",
+      "successAllPrimary": "Primary objectives completed successfully",
+      "partialMajorityGoals": "Partial mission completion with majority goals met",
+      "partialNoGoals": "Crew survived full duration without primary goals",
+      "abortEarlySafe": "Early mission abort with crew fully preserved",
+      "abortLateSafe": "Late mission abort with crew safe",
+      "lossWithSurvivors": "Outpost compromised with surviving crew members",
+      "lossNoSurvivors": "Total outpost and crew loss"
+    },
+    "margin": {
+      "batteryDepleted": "Battery depleted to zero percent reserve",
+      "crewCritical": "Crew member entered critical medical condition",
+      "doseExceeded": "Cumulative radiation dose exceeded 400 mSv career threshold",
+      "rationingMode1": "Mode 1 rationing active",
+      "rationingMode2": "Mode 2 rationing active",
+      "lowOxygenExcursion": "Atmospheric oxygen partial pressure below warning limit",
+      "highCo2Excursion": "Cabin carbon dioxide accumulated above 3.0 mmHg",
+      "severeCo2Excursion": "Cabin carbon dioxide accumulated above 7.6 mmHg",
+      "lowWaterExcursion": "Potable water reserves below emergency reserve"
+    },
+    "decision": {
+      "timerExpiredDefault": "Response timer lapsed — unmitigated default taken",
+      "superiorResponse": "Selected action mitigated hazard below counterfactual default cost",
+      "acceptableResponse": "Selected action addressed hazard within expected parameters",
+      "costlyResponse": "Response incurred elevated downstream resource friction",
+      "proactivePriorityBonus": "Power load priority preemptively rebalanced prior to brownout",
+      "proactiveRationBonus": "Ration consumption reduced prior to critical reserve breach",
+      "proactiveMaintenanceBonus": "Preventive maintenance completed prior to component wear failure",
+      "evaNoGoBeforeSpeBonus": "EVA operations suspended prior to solar particle event",
+      "earlyShelterBonus": "Crew sheltered in storm bunker prior to radiation event confirmation",
+      "nominalOperations": "Nominal station operations maintained",
+      "noCostlyErrors": "No critical tactical errors recorded"
+    },
+    "efficiency": {
+      "improvisedRepairDeduction": "Improvised repair completed with degraded component efficiency",
+      "failedRepairDeduction": "Repair attempt failed with consumed spare parts",
+      "overProvisionedFoodDeduction": "Food inventory over-provisioned at mission completion",
+      "prematureRefailureDeduction": "Repaired component failed prematurely within 10 sols"
+    },
+    "welfare": {
+      "averageMoraleScore": "Average crew morale across mission duration",
+      "overtimeWithinBounds": "Crew work hours kept within sustainable limits (<= 48h overtime)",
+      "overtimeExceededDeduction": "Crew work hours exceeded overtime endurance limits",
+      "noPreventableImpairment": "No crew members suffered preventable physical impairment",
+      "preventableImpairmentOccurred": "Preventable crew fatigue or impairment incurred"
+    },
+    "crisis": {
+      "speed": "Resolution Speed",
+      "hazard": "Peak Hazard Mitigation",
+      "resources": "Resources Conserved",
+      "crew": "Crew Condition",
+      "apollo13": {
+        "briefing": {
+          "specialist": "Translunar return trajectory. LiOH canisters are incompatible — cabin ppCO₂ is climbing steadily toward toxic levels. Improvise a scrubber adapter before lethal hypercapnia occurs.",
+          "cadet": "On the way back from the Moon, carbon dioxide is building up in the air. Build the filter fix before the air gets dangerous."
+        }
+      },
+      "spe1972": {
+        "briefing": {
+          "specialist": "Historical August 1972 solar particle event. Unshielded surface dose rates exceed acute radiation sickness thresholds — evacuate EVA crew to the regolith storm shelter immediately.",
+          "cadet": "A giant solar storm hits the Moon. Send everyone outside into the storm shelter right away."
+        }
+      },
+      "mirFire": {
+        "briefing": {
+          "specialist": "Kvant-1 oxygen generator fire. Toxic smoke and flames threaten module integrity and escape routes — deploy extinguishers and isolate ventilation immediately.",
+          "cadet": "A fire started in an oxygen maker on Mir. Put on masks, fight the fire, and stop the smoke from spreading."
+        }
+      }
+    }
+  },
+  "bigIdea": {
+    "heading": "Big Idea Check",
+    "badge": "Concept Check",
+    "needsReview": false,
+    "firstLight": {
+      "idea": "A base can only use power it has made or saved. The Moon's night lasts about 15 days.",
+      "detail": "The night lasts {nightHours} hours. The battery must cover the whole load, so the lowest-priority loads are turned off first.",
+      "question": "Why does the crew turn off the garden lights before the long night?",
+      "options": {
+        "A": "Plants grow better in the dark.",
+        "B": "To save battery power for air and heat.",
+        "C": "The plants are done growing."
+      },
+      "rightFeedback": "Right! The battery holds only so much power. The crew needs it for air and heat first.",
+      "wrongFeedback": "Not quite. The night lasts about 15 days. The battery must last the whole time, so the crew saves power for air and heat.",
+      "needsReview": false
+    },
+    "stormWarning": {
+      "idea": "Thick walls help keep people safe from radiation. But hiding costs time and power.",
+      "detail": "Shielding thickness (g/cm²) cuts radiation dose. Sheltering costs crew-hours and pauses science and outside work.",
+      "question": "The crew waits in the storm shelter for many hours. What do they give up?",
+      "options": {
+        "A": "Time for outside work and science.",
+        "B": "Their air.",
+        "C": "Nothing. Hiding is free."
+      },
+      "rightFeedback": "Right! Every hour in the shelter is an hour not spent working. Staying safe has a price.",
+      "wrongFeedback": "Not quite. In the shelter the crew is safe, but they can't do outside work or science. Staying safe has a price.",
+      "needsReview": false
+    },
+    "greenThumb": {
+      "idea": "Plants need light to grow. In space, lamps make that light, and lamps use power.",
+      "detail": "The greenhouse lights draw {greenhouseKw} kW in this mission. Fewer lit hours means slower growth and less food.",
+      "question": "The crew turns the garden lights down to save power. What happens to the plants?",
+      "options": {
+        "A": "They grow faster in the dark.",
+        "B": "Nothing changes.",
+        "C": "They grow more slowly, so there is less food later."
+      },
+      "rightFeedback": "Right! Less light means slower growth. Saving power can cost food later.",
+      "wrongFeedback": "Not quite. Plants use light to grow. With less light they grow more slowly, so there is less food later.",
+      "needsReview": false
+    },
+    "helloEarth": {
+      "idea": "A message from Mars takes at least 3 minutes to reach Earth. The crew often has to decide alone.",
+      "detail": "One-way light-time is about {lightTimeMinMin} to {lightTimeMaxMin} minutes, depending on the Earth–Mars distance (JPL Horizons).",
+      "question": "A fire alarm sounds on Mars. Should the crew wait for Earth's answer?",
+      "options": {
+        "A": "Yes. Earth always knows best.",
+        "B": "No. The answer would come too late, so the crew acts first.",
+        "C": "Yes. Messages arrive in one second."
+      },
+      "rightFeedback": "Right! A message takes at least 3 minutes to get to Earth, and the answer takes as long to come back. For a fire, the crew must act first.",
+      "wrongFeedback": "Not quite. A message from Mars takes at least 3 minutes to reach Earth. The answer takes as long to come back. For a fire, the crew must act first.",
+      "needsReview": false
+    }
+  }
+}
