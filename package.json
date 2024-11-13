@@ -1,0 +1,47 @@
+{
+  "name": "sol-keeper",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "pnpm -r typecheck && tsc -p e2e/tsconfig.json --noEmit && tsc -p scripts/tsconfig.json --noEmit",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "sim": "pnpm --filter @sol-keeper/sim run sim",
+    "gen:source-verification": "node scripts/generate-source-verification.ts",
+    "bn-review:export": "node scripts/bn-review-export.ts",
+    "bn-review:import": "node scripts/bn-review-import.ts",
+    "verify": "pnpm typecheck && pnpm lint && pnpm test",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui",
+    "lighthouse": "node scripts/lighthouse.ts",
+    "gen:station-images": "node scripts/generate-station-images.ts",
+    "score:baselines": "node scripts/score-baselines.ts",
+    "consistency:check": "node scripts/consistency-check.ts"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^24.5.2",
+    "eslint": "^9.36.0",
+    "eslint-config-prettier": "^10.1.8",
+    "lighthouse": "^12.8.2",
+    "prettier": "^3.6.2",
+    "sharp": "^0.35.5",
+    "typescript": "^5.9.2",
+    "typescript-eslint": "^8.44.1",
+    "vitest": "^3.2.4"
+  }
+}
