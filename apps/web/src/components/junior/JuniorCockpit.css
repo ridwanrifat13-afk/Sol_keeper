@@ -1,0 +1,160 @@
+.junior-cockpit-root {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 12px 16px 32px;
+}
+
+.junior-cockpit-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+}
+
+.junior-mission-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.junior-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 0;
+  color: #f0f6fc;
+}
+
+.junior-day-badge {
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: #21262d;
+  border: 1px solid #30363d;
+  padding: 2px 8px;
+  border-radius: 12px;
+  color: #58a6ff;
+}
+
+.junior-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.junior-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.88rem;
+  padding: 6px 10px;
+}
+
+.junior-help-panel {
+  background: #161b22;
+  border: 1px solid #58a6ff;
+  border-radius: 8px;
+  padding: 14px 18px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #c9d1d9;
+}
+
+.junior-help-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.junior-help-header h3 {
+  margin: 0;
+  color: #58a6ff;
+  font-size: 1rem;
+}
+
+.junior-gauges-section {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.junior-gauge-card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+}
+
+.junior-action-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.junior-priority-drawer {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+
+.junior-priority-toggle {
+  width: 100%;
+  text-align: left;
+  font-weight: 600;
+  color: #58a6ff;
+  font-size: 0.88rem;
+  padding: 6px 8px;
+}
+
+.junior-priority-content {
+  margin-top: 8px;
+}
+
+.junior-cockpit-footer {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+}
+
+.junior-play-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 14px 36px;
+  font-size: 1.15rem;
+  font-weight: 700;
+  border-radius: 30px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  transition: all 0.15s ease-in-out;
+}
+
+.junior-play-btn.is-play {
+  background: #238636;
+  color: #ffffff;
+}
+
+.junior-play-btn.is-play:hover {
+  background: #2ea043;
+  transform: scale(1.03);
+}
+
+.junior-play-btn.is-pause {
+  background: #d29922;
+  color: #ffffff;
+}
+
+.junior-play-btn.is-pause:hover {
+  background: #e3b341;
+  transform: scale(1.03);
+}
