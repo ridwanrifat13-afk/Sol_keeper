@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>About Sol Keeper - Junior Astronaut Mission Trainer</title>
+  <meta name="description" content="Sol Keeper is a browser-based, offline-ready mission simulator designed for students ages 7-12, grounded in real NASA open data and technical standards.">
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --bg-panel: #131b2e;
+      --bg-card: rgba(255, 255, 255, 0.04);
+      --line: rgba(255, 255, 255, 0.12);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-glow: rgba(56, 189, 248, 0.15);
+      --radius: 8px;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      line-height: 1.6;
+      font-size: 16px;
+    }
+    header.site-header {
+      background-color: var(--bg-panel);
+      border-bottom: 1px solid var(--line);
+      padding: 1.5rem 1rem;
+      text-align: center;
+    }
+    header.site-header h1 {
+      margin: 0 0 0.5rem 0;
+      font-size: 2.25rem;
+      color: #fff;
+    }
+    header.site-header p.sub {
+      margin: 0;
+      color: var(--accent);
+      font-weight: 500;
+    }
+    main {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 2rem 1.25rem;
+    }
+    section {
+      background: var(--bg-panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 1.75rem;
+      margin-bottom: 2rem;
+    }
+    h2 {
+      margin-top: 0;
+      color: #fff;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 0.5rem;
+      font-size: 1.5rem;
+    }
+    h3 {
+      color: var(--accent);
+      margin-top: 1.5rem;
+      font-size: 1.2rem;
+    }
+    p, li {
+      color: var(--text);
+    }
+    a {
+      color: var(--accent);
+      text-decoration: underline;
+    }
+    a:hover, a:focus {
+      color: #7dd3fc;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1.25rem 0;
+      font-size: 0.95rem;
+    }
+    th, td {
+      border: 1px solid var(--line);
+      padding: 0.75rem;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background-color: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      font-weight: 600;
+    }
+    tr:nth-child(even) td {
+      background-color: rgba(255, 255, 255, 0.02);
+    }
+    ol, ul {
+      padding-left: 1.5rem;
+    }
+    li {
+      margin-bottom: 0.5rem;
+    }
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: var(--accent-glow);
+      color: var(--accent);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+    }
+    footer.site-footer {
+      border-top: 1px solid var(--line);
+      padding: 2rem 1rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+    }
+    .cta-button {
+      display: inline-block;
+      background: #0284c7;
+      color: #fff;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+    .cta-button:hover {
+      background: #0369a1;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <h1>Sol Keeper</h1>
+    <p class="sub">Junior Astronaut Mission Trainer — NASA Space Apps Challenge 2026</p>
+    <p style="margin-top: 0.5rem; color: var(--text-muted); font-size: 0.9rem;">
+      Team <strong>Projonmo Apollo</strong> (CUET) · Submission for <em>"Build a Junior Astronaut Mission Trainer"</em>
+    </p>
+    <a href="/" class="cta-button">Launch Live Application</a>
+  </header>
+
+  <main>
+    <section aria-labelledby="summary-heading">
+      <h2 id="summary-heading">Project Overview</h2>
+      <p>
+        <strong>Sol Keeper</strong> is a browser-based, offline-ready mission simulator designed for students ages 7–12 (with depths flexing to high school and classroom use) that transforms deep space survival constraints into gameplay. Operating lunar and Martian outposts across 5 training missions and 3 historical crisis replays, players make real decisions across five station consoles—balancing life support, power load shedding, radiation sheltering, food production, and communication light delays. Players can jump straight into the action with <strong>Fast Play</strong>, take on the daily challenge via <strong>Mission of the Day</strong>, and track live space weather with <strong>Today on the Sun</strong>. Every number the simulation computes traces directly to authenticated NASA technical standards (BVAD, OCHMO, APR 8070.1) or real space weather and orbital telemetry (DONKI, OSDR, Horizons, Trek). Through the <strong>Reality Dial</strong>, the same deterministic physics engine is presented at three cognitive depths—Cadet (visual gauges, qualitative status words, Flesch–Kincaid Grade 3.6), Specialist (SI engineering units), and Commander (mathematical rates and equations)—ensuring that no choice is free and every decision teaches something true.
+      </p>
+    </section>
+
+    <section aria-labelledby="judge-path-heading">
+      <h2 id="judge-path-heading">60-Second Judge Path</h2>
+      <ol>
+        <li>
+          <strong>0:00 – Launch in One Click:</strong><br>
+          Open the application and click <strong><a href="/?fastPlay=1">Fast Play (Jezero Outpost)</a></strong> (or launch with telemetry via <a href="/?v=9&amp;sc=jezero-outpost&amp;d=nominal&amp;cs=4&amp;site=jezero&amp;p=solarBattery&amp;sh=regolithBerm&amp;sd=42">Deep Link</a>) to land directly on the Mission Briefing.
+        </li>
+        <li>
+          <strong>0:15 – Review Real Space Agency Data:</strong><br>
+          Inspect the Martian environmental hazards (30 sols, solar-only power, 60h dust storm). Check <strong>Today on the Sun</strong> for live/archived NASA DONKI solar flare telemetry and the <strong>Astronaut Science</strong> card derived from NASA OSDR space biology publications.
+        </li>
+        <li>
+          <strong>0:30 – Experience the Reality Dial:</strong><br>
+          Tap <strong>Cockpit</strong> to view the command deck. Click <strong>Run the Sol</strong> to advance mission time. Flip the <strong>Reality Dial</strong> in the header from <em>Cadet</em> (icons and plain words, Grade 3.6 readability) to <em>Specialist</em> (kW, kg/day, mmHg) to <em>Commander</em> (rate equations). The underlying simulation state remains byte-identical.
+        </li>
+        <li>
+          <strong>0:45 – Execute a Genuine Trade-Off:</strong><br>
+          Open the <strong>Life Support Console</strong> to activate the Brine Processor Assembly (saving water at the cost of 1.5 daily crew-hours), or open the <strong>Power Console</strong> to reorder the load-shedding priority list. Every decision enforces a real resource cost—no action is free.
+        </li>
+        <li>
+          <strong>1:00 – Verify Scientific Traceability:</strong><br>
+          Click <strong>Data Sources</strong> or <strong>Data Passport</strong> in the navigation chrome to inspect all 59 cataloged datasets, each with primary source links, evidence badges, and DOI/NTRS citations.
+        </li>
+      </ol>
+    </section>
+
+    <section aria-labelledby="judges-guide-heading">
+      <h2 id="judges-guide-heading">Judges Guide: Challenge Requirements &amp; Criteria</h2>
+
+      <h3>Challenge Statement Requirements</h3>
+      <table>
+        <caption>Audit of Sol Keeper against official NASA Space Apps statement requirements</caption>
+        <thead>
+          <tr>
+            <th scope="col">Requirement Clause</th>
+            <th scope="col">Sol Keeper Feature</th>
+            <th scope="col">Where to See It</th>
+            <th scope="col">Evidence &amp; Verification</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Kids ages 7–12 managing a lunar or Martian outpost</strong></td>
+            <td>Core web simulation with Martian outposts (<em>Jezero Outpost</em>, <em>Storm Watch</em>) and lunar bases (<em>First Light</em>, <em>The Long Night</em>, <em>Green Thumb</em>).</td>
+            <td>Homepage Launch Windows &amp; Setup Wizard</td>
+            <td><code>packages/sim/src/data/scenarios/</code>, audited in <code>docs/STATEMENT_AUDIT.md</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Real decisions on life support, radiation, power, food, comms</strong></td>
+            <td>Five operational consoles (Life Support, Power, Comms, Incident Command, Mission Command) with 11 distinct active control levers.</td>
+            <td>Cockpit View and Station Tabs</td>
+            <td><code>packages/sim/src/models/</code>, validated in <code>packages/sim/src/validation/</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Competing resources; no choice is free</strong></td>
+            <td>Zero-sum resource mechanics: Brine Processor recovery costs 1.5 crew-h/day; CO₂ enrichment accelerates crops but risks hypoxia; sheltering halts science and grow lights.</td>
+            <td>Life Support dials, Incident Command, Decision Cards</td>
+            <td><code>packages/sim/src/engine/crewHours.ts</code>, <code>co2ScrubberDutyCycle.test.ts</code>, <code>waterReclamationMode.test.ts</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Grounding in real NASA open data (DONKI, OSDR, surface data)</strong></td>
+            <td>Real solar flare &amp; CME feeds via DONKI; NASA OSDR space biology research cards; MSL Curiosity &amp; Chang'e-4 surface radiation measurements; NASA Trek LRO/Viking maps.</td>
+            <td>Today on the Sun, Astronaut Science, Landing Site Map</td>
+            <td><code>apps/web/api/space-weather.ts</code>, <code>docs/OSDR_PICKS.md</code>, <code>docs/DATA_PASSPORT.md</code> (59 rows).</td>
+          </tr>
+          <tr>
+            <td><strong>Plain language over jargon (accessible to young kids)</strong></td>
+            <td>Cadet Reality Dial tier written at average Flesch–Kincaid Grade 3.6; contextual <code>?</code> help buttons on all gauges; inline explanations for technical terms.</td>
+            <td>Dial Switch (Cadet mode), Gauge <code>?</code> buttons</td>
+            <td>Scored in <code>docs/STATEMENT_AUDIT.md</code> §2 Metric 1 (205 strings, 3.6 avg grade).</td>
+          </tr>
+          <tr>
+            <td><strong>No NASA insignia; full data attribution</strong></td>
+            <td>Zero NASA logos or insignia anywhere in the application (compliant with Challenge rules); comprehensive in-app attribution modal and Data Passport.</td>
+            <td>Footer disclaimer, Data Sources view, Data Passport view</td>
+            <td><code>apps/web/src/views/DataSources/DataSourcesView.tsx</code>, <code>docs/CREDITS.md</code>.</td>
+          </tr>
+          <tr>
+            <td><strong>Replayability &amp; learning from failure</strong></td>
+            <td>5 standard scenarios + 3 historical crisis replays; deterministic seed-based RNG; 1-click Try Again / Rewind; post-mission Big Idea concept checks.</td>
+            <td>Crisis Selection View, Debrief, Big Idea checks</td>
+            <td><code>packages/sim/src/engine/replay.ts</code>, <code>apps/web/tests/tryAgainRewind.test.ts</code>, <code>apps/web/tests/bigIdeaCheck.test.ts</code>.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Official Space Apps Judging Criteria</h3>
+      <table>
+        <caption>Evaluation against the five official NASA Space Apps judging criteria</caption>
+        <thead>
+          <tr>
+            <th scope="col">Criterion</th>
+            <th scope="col">Project Execution</th>
+            <th scope="col">Where to See It</th>
+            <th scope="col">Evidence Link</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Impact</strong></td>
+            <td>Solves the STEM translation gap by turning authentic space agency engineering trade-offs into playable, age-tiered learning without dumbing down the science.</td>
+            <td>Reality Dial (Cadet mode), printable Mission Report, reproducible run links</td>
+            <td><code>docs/STATEMENT_AUDIT.md</code>, <code>apps/web/src/share/runLink.ts</code></td>
+          </tr>
+          <tr>
+            <td><strong>Creativity</strong></td>
+            <td>Reality Dial architecture (one immutable, deterministic simulation engine powering three cognitive presentations); dual-mode dashboard + photographed 3D cockpit.</td>
+            <td>Dial switch, Cockpit mode toggle, Crisis Selection view</td>
+            <td><code>apps/web/src/dial/types.ts</code>, <code>apps/web/src/cockpit/CockpitTarget.tsx</code></td>
+          </tr>
+          <tr>
+            <td><strong>Validity</strong></td>
+            <td>100% of physical simulation parameters trace to peer-reviewed agency literature. Pure TypeScript engine validated by 75 test suites, 691 tests, and a 4,050-seed Monte Carlo bot balance suite.</td>
+            <td>Data Sources, Data Passport, test suite</td>
+            <td><code>packages/sim/src/validation/</code> (691 tests), <code>docs/BALANCE.md</code>, <code>docs/DATA_PASSPORT.md</code></td>
+          </tr>
+          <tr>
+            <td><strong>Relevance</strong></td>
+            <td>Directly answers the challenge brief: kids ages 7–12 managing lunar/Martian bases, making real resource decisions grounded in real NASA open datasets.</td>
+            <td>5 training missions, live DONKI feeds, OSDR science cards</td>
+            <td><code>docs/CHALLENGE_STATEMENT.md</code>, <code>docs/STATEMENT_AUDIT.md</code></td>
+          </tr>
+          <tr>
+            <td><strong>Presentation</strong></td>
+            <td>Fully responsive, offline-ready PWA with zero download or login barrier; bilingual (English &amp; বাংলা); WCAG AAA contrast; scroll-contained modals; print-ready debriefs.</td>
+            <td>Live web app, language switch, PWA service worker</td>
+            <td><code>apps/web/src/styles.css</code>, <code>apps/web/tests/render.test.tsx</code></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section aria-labelledby="dial-heading">
+      <h2 id="dial-heading">The Reality Dial</h2>
+      <p>The central innovation of Sol Keeper is <strong>one simulation, presented at three depths</strong>:</p>
+      <table>
+        <caption>Reality Dial depth tiers and audience mapping</caption>
+        <thead>
+          <tr>
+            <th scope="col">Depth</th>
+            <th scope="col">Audience</th>
+            <th scope="col">What changes</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Cadet</strong></td>
+            <td>Ages 7–12 (Grade 3.6 reading level)</td>
+            <td>Visual gauges, icons, qualitative status words, guided tutorial.</td>
+          </tr>
+          <tr>
+            <td><strong>Specialist</strong></td>
+            <td>Ages 12–14 (Middle school)</td>
+            <td>Real numbers, SI engineering units (kW, kg/day, mmHg, mSv).</td>
+          </tr>
+          <tr>
+            <td><strong>Commander</strong></td>
+            <td>Ages 15+ &amp; Classrooms</td>
+            <td>Rate equations, safety thresholds, and underlying physics mathematics.</td>
+          </tr>
+        </tbody>
+      </table>
+      <p>The simulation itself never changes between levels—only how it is explained. Toggling the dial mid-mission keeps the numbers underneath bit-identical.</p>
+    </section>
+
+    <section aria-labelledby="missions-heading">
+      <h2 id="missions-heading">Missions &amp; Historical Crises</h2>
+      <h3>Five Standard Training Missions</h3>
+      <table>
+        <caption>Standard simulation training scenarios</caption>
+        <thead>
+          <tr>
+            <th scope="col">Mission</th>
+            <th scope="col">Body</th>
+            <th scope="col">Site</th>
+            <th scope="col">Length</th>
+            <th scope="col">Defining Hazard</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Jezero Outpost</strong></td>
+            <td>Mars</td>
+            <td>Jezero Crater</td>
+            <td>30 sols</td>
+            <td>A 2018-scale global dust storm</td>
+          </tr>
+          <tr>
+            <td><strong>First Light</strong></td>
+            <td>Moon</td>
+            <td>Connecting Ridge</td>
+            <td>31 days</td>
+            <td>One 354-hour polar night</td>
+          </tr>
+          <tr>
+            <td><strong>The Long Night</strong></td>
+            <td>Moon</td>
+            <td>Connecting Ridge</td>
+            <td>89 days</td>
+            <td>Three lunar nights, fission reactor powered</td>
+          </tr>
+          <tr>
+            <td><strong>Green Thumb</strong></td>
+            <td>Moon</td>
+            <td>Marius Hills</td>
+            <td>14 days</td>
+            <td>Closed-loop lunar greenhouse &amp; crop light schedule</td>
+          </tr>
+          <tr>
+            <td><strong>Storm Watch</strong></td>
+            <td>Mars</td>
+            <td>Jezero Crater</td>
+            <td>3 days</td>
+            <td>NASA DONKI-archived May 10, 2024 extreme solar storm</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Three Historical Crisis Replays</h3>
+      <table>
+        <caption>Historical spaceflight emergency replays</caption>
+        <thead>
+          <tr>
+            <th scope="col">Crisis Scenario</th>
+            <th scope="col">Spacecraft / Station</th>
+            <th scope="col">Historical Date</th>
+            <th scope="col">Key Emergency</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Apollo 13 CO₂ Buildup</strong></td>
+            <td>LM Aquarius</td>
+            <td>April 1970</td>
+            <td>Improvised square-to-round LiOH scrubber adapter</td>
+          </tr>
+          <tr>
+            <td><strong>Solar Particle Event 1972</strong></td>
+            <td>Apollo Outpost (Descartes)</td>
+            <td>August 1972</td>
+            <td>Extreme solar proton storm evacuation to regolith shelter</td>
+          </tr>
+          <tr>
+            <td><strong>Mir Space Station Fire 1997</strong></td>
+            <td>Mir Kvant-1 Module</td>
+            <td>February 1997</td>
+            <td>Solid-fuel oxygen candle (Vika) fire and smoke mitigation</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section aria-labelledby="tech-heading">
+      <h2 id="tech-heading">Technical Architecture &amp; Verification</h2>
+      <ul>
+        <li><strong>Deterministic Simulation:</strong> Pure TypeScript engine in <code>packages/sim</code> with zero external side effects, validated by 75 test suites and 691 automated tests.</li>
+        <li><strong>Monte Carlo Balance Harness:</strong> 4,050 seeds evaluated across <code>idleBot</code>, <code>greedyBot</code>, and <code>prudentBot</code> to guarantee every failure mode is reachable and skilled play is rewarded.</li>
+        <li><strong>Offline-Ready Progressive Web App:</strong> Precached via Workbox (121 assets, 10.7 MB total) for spotty classroom connectivity.</li>
+        <li><strong>Privacy &amp; AI Disclosure:</strong> Zero player free text collected, stored, or transmitted; zero analytics tracking; zero runtime AI calls. Developed using Claude Code for engineering assistance and verification.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>
+      Sol Keeper is an educational submission for NASA Space Apps Challenge 2026 by Projonmo Apollo (CUET).<br>
+      Not affiliated with or endorsed by NASA. Data credited to NASA and cited researchers.<br>
+      <a href="/">Back to Sol Keeper Application</a> · <a href="/#credits">Credits &amp; Licenses</a>
+    </p>
+  </footer>
+
+</body>
+</html>
