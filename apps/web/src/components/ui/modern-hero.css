@@ -1,0 +1,1173 @@
+/* Modern Hero & Parallax Scroll Styles */
+.modern-hero-root {
+  background-color: #09090b;
+  background-image:
+    linear-gradient(
+      to bottom,
+      rgba(9, 9, 11, 0) 0%,
+      rgba(9, 9, 11, 0) 65%,
+      rgba(9, 9, 11, 0.45) 85%,
+      rgba(9, 9, 11, 0.88) 100%
+    ),
+    url("/images/_%20(10).jpeg");
+  background-repeat: no-repeat, repeat-y;
+  background-position: center top, center top;
+  background-attachment: scroll, scroll;
+  background-size: 100% 100%, 100% auto;
+  color: #fafafa;
+  min-height: 100vh;
+  position: relative;
+  /* `overflow-x: hidden` with no `overflow-y` set looks harmless but isn't: per the CSS
+     Overflow spec, when one axis is non-visible and the other is left at its default
+     (visible), the visible one computes to `auto` instead — silently turning this element
+     into a scroll container. That container (which never actually scrolls itself; the real
+     page does) becomes the nearest scrolling ancestor for every `position: sticky` descendant
+     below (CenterImage, HeroHeadline), so their sticky pinning never engaged at all — measured
+     directly (real `getBoundingClientRect()` calls while scrolling): their rect.top tracked
+     `-scrollY` exactly, i.e. plain unstuck flow, not a pinned element. That's the real, much
+     larger cause behind the player-reported "huge black gap after the 1st image": the image
+     was scrolling fully away in one viewport height while the pin zone still reserved much
+     more scroll distance for an animation that, in practice, was never staying pinned long
+     enough to fill it. `overflow-x: clip` clips the same horizontal overflow (parallax images'
+     own transforms) without establishing a scroll container or ever engaging that quirk. */
+  overflow-x: clip;
+  font-family: inherit;
+}
+
+/* Navigation bar - completely transparent */
+.modern-hero-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 2rem;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  border-bottom: none;
+}
+
+.modern-hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  text-decoration: none;
+  color: #fff;
+  /* A single dark pill instead of plain text floating over whatever part of the hero image
+     is behind it — the logo already carries its own dark badge baked into the asset, so this
+     makes the whole "Sol Keeper · by · [logo]" lockup read as one unit sitting on a
+     consistent background, legible regardless of scroll position, instead of text that goes
+     low-contrast over a light patch of sky and a separate box beside it. */
+  background: rgba(9, 9, 11, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 0.4rem 0.75rem 0.4rem 0.9rem;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.modern-hero-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #ffffff;
+}
+
+.modern-hero-by {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #a8b0c2;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
+  margin-left: 0.15rem;
+}
+
+.modern-hero-team-logo {
+  height: 26px;
+  width: auto;
+  object-fit: contain;
+  vertical-align: middle;
+  margin-left: 0.2rem;
+  transition: transform 0.2s ease;
+}
+
+.modern-hero-team-logo:hover {
+  transform: scale(1.05);
+  filter: drop-shadow(0 4px 12px rgba(30, 91, 198, 0.5));
+}
+
+.modern-hero-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.modern-hero-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #a1a1aa;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+
+.modern-hero-nav-btn:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.modern-hero-cta-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: linear-gradient(135deg, #0b3d91 0%, #1e5bc6 100%);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 0 20px rgba(11, 61, 145, 0.4);
+  cursor: pointer;
+  transition:
+    transform 0.15s,
+    box-shadow 0.2s;
+}
+
+.modern-hero-cta-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 0 28px rgba(30, 91, 198, 0.65);
+}
+
+.modern-hero-play-btn {
+  background: #238636;
+  color: #ffffff;
+}
+
+.modern-hero-play-btn:hover {
+  background: #2ea043;
+  box-shadow: 0 0 28px rgba(46, 160, 67, 0.65);
+}
+
+.modern-hero-btn-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.15;
+}
+
+.modern-hero-btn-label {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.modern-hero-btn-sublabel {
+  font-size: 0.62rem;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.9;
+  margin-top: 1px;
+}
+
+/* Center hero and image */
+.modern-hero-section {
+  position: relative;
+  width: 100%;
+}
+
+/* The sticky pin zone (CenterImage + HeroHeadline) alone gets the fixed scroll-driven height
+   and its own clip — sized for that zoom/fade animation's own pacing, not for however tall
+   the parallax content below happens to be. Previously this fixed height (and its
+   overflow: hidden) sat on .modern-hero-section itself, wrapping the parallax content too —
+   on a shorter viewport, or once real content (feature cards) grew past this height, it was
+   silently clipped away entirely rather than pushing Launch Windows lower, the player-
+   reported bug this split fixes. */
+.modern-hero-pin-zone {
+  position: relative;
+  width: 100%;
+}
+
+.modern-hero-center-img {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  width: 100%;
+  will-change: clip-path, opacity;
+}
+
+/* The actual photo layer, always `background-size: cover` — never animated directly (see
+   modern-hero.tsx's own CenterImage doc comment for why an animated percentage broke full
+   coverage on mobile). The zoom effect is a `transform: scale` on this layer instead, which
+   can only ever show more of an already-fully-covering image, never a gap. */
+.modern-hero-center-img-layer {
+  position: absolute;
+  inset: 0;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  will-change: transform;
+}
+
+.modern-hero-gradient-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30rem;
+  background: linear-gradient(
+    to bottom,
+    rgba(9, 9, 11, 0) 0%,
+    rgba(9, 9, 11, 0.4) 65%,
+    rgba(9, 9, 11, 0.7) 100%
+  );
+  pointer-events: none;
+}
+
+/* Hero headline — sticky-pinned over the center image, same as the image itself, so it reads
+   clearly at rest and fades out fast once the player starts scrolling. Left-aligned (never
+   centered — player request: homepage text sections sit left or right, not in the middle),
+   with a left-side scrim so it stays legible regardless of what's under it. */
+.modern-hero-headline {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  text-align: left;
+  gap: 0.9rem;
+  padding: 0 2rem;
+  margin-top: -100vh;
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(5, 6, 10, 0.82) 0%, rgba(5, 6, 10, 0.55) 42%, rgba(5, 6, 10, 0) 75%);
+}
+
+@media (min-width: 900px) {
+  .modern-hero-headline {
+    padding-left: 4.5rem;
+    max-width: 60%;
+  }
+}
+
+.modern-hero-headline-eyebrow {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #9fd0ff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.85);
+}
+
+.modern-hero-headline-title {
+  font-size: clamp(2rem, 5.5vw, 4rem);
+  font-weight: 800;
+  line-height: 1.08;
+  color: #ffffff;
+  text-shadow: 0 4px 24px rgba(0, 0, 0, 0.85);
+  max-width: 20ch;
+}
+
+.modern-hero-headline-sub {
+  font-size: clamp(0.95rem, 1.6vw, 1.2rem);
+  color: #e3e8f5;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
+  max-width: 46ch;
+}
+
+.modern-hero-headline-missions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(9, 9, 11, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  padding: 0.5rem 1.1rem;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.modern-hero-headline-missions span[aria-hidden] {
+  color: #6b7280;
+}
+
+@media (max-width: 640px) {
+  .modern-hero-headline-missions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
+
+/* Parallax gallery */
+.modern-hero-parallax-container {
+  margin: 0 auto;
+  max-width: 68rem;
+  /* Bottom padding (player report: Launch Windows should sit "a bit lower," not flush against
+     the last image) — real breathing room now that .modern-hero-pin-zone's own split fix
+     means this container's natural height is never clipped, so this padding always actually
+     renders rather than sometimes being eaten by the old shared overflow:hidden. */
+  padding: 200px 1rem 5rem;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.modern-hero-parallax-img {
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  object-fit: cover;
+  display: block;
+}
+
+.parallax-w-1-3 {
+  width: 33.333%;
+}
+
+.parallax-w-2-3 {
+  width: 66.666%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.parallax-w-1-3-ml-auto {
+  width: 33.333%;
+  margin-left: auto;
+}
+
+.parallax-w-5-12 {
+  width: 41.666%;
+  margin-left: 6rem;
+}
+
+/* Hero feature/rule callouts (player request) — left/right of the parallax images, same
+   scroll-linked motion as ParallaxImg above (translateY + scale + opacity), never centered
+   (this file's own established rule for hero text — see .modern-hero-headline's own note). */
+.modern-hero-feature {
+  width: 24rem;
+  max-width: 40%;
+  margin: 3.5rem 0;
+  padding: 1.5rem 1.75rem;
+  background: rgba(9, 9, 11, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+
+.modern-hero-feature-right {
+  margin-left: auto;
+  text-align: right;
+}
+
+.modern-hero-feature-left {
+  margin-right: auto;
+  text-align: left;
+}
+
+/* Targeted extra clearance above one specific card (the one right after the tall portrait-
+   oriented image), not raised on every card — a real class (not an inline style) so the
+   mobile breakpoint below can give it its own, smaller value instead of inheriting a
+   desktop-tuned gap that overlapped the image above it on a narrow viewport. */
+.modern-hero-feature-extra-top {
+  margin-top: 9rem;
+}
+
+.modern-hero-feature-title {
+  margin: 0 0 0.4rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #9fd0ff;
+}
+
+.modern-hero-feature-body {
+  margin: 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #d4d4d8;
+}
+
+/* Launch Schedule section */
+.modern-hero-schedule {
+  /* Player request: the video fills this section corner to corner — full viewport width, not
+     the old centered 68rem column. `.modern-hero-schedule-content` (below) is what carries the
+     real reading-width constraint now, right-aligned over this full-bleed backdrop instead. */
+  width: 100%;
+  padding: 8rem 2.5rem 10rem;
+  color: #fff;
+  position: relative;
+  z-index: 10;
+  /* A visible seam, not just a same-color continuation, so the shortcuts list reads as its
+     own section rather than a fade-out of the hero above it. Flat colour, not a gradient —
+     ScheduleVideoBackground's own gradient (below) sits on top of this as a fallback base
+     while the video/poster loads in, so there's never a flash of raw black underneath them. */
+  background-color: rgba(9, 9, 11, 0.85);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+/* The real reading column — right-of-centre (`margin-left: auto`) over the full-bleed video,
+   so the astronaut stays visible down the left side of the section instead of being covered
+   by the card list the way the old full-width centered layout covered it. Player follow-up:
+   wider than the first cut (34rem → 42rem) and pulled in from the right edge via
+   `margin-right` instead of sitting flush against the section's own padding, so it reads as
+   sitting over the middle-right of the frame rather than pinned to the corner. */
+.modern-hero-schedule-content {
+  max-width: 42rem;
+  margin-left: auto;
+  margin-right: 4rem;
+  position: relative;
+  z-index: 1;
+}
+
+/* Player request: give Launch Windows the same full-bleed, astronaut-on-the-surface look as
+   the hero above it — a looping video instead of a static photo, scoped to this section (not
+   the whole page) as its own backdrop. `absolute`, not `fixed`: `overflow: hidden` on
+   `.modern-hero-schedule` only clips a `fixed` descendant when that ancestor also has a
+   `transform`/`filter`/etc. establishing a containing block for it — without one, a `fixed`
+   layer here would render relative to the viewport, not this section, and bleed out past its
+   top/bottom edges (visible behind the hero above, or past the page's real end). `absolute`
+   sizes correctly to `.modern-hero-schedule`'s own box (`inset: 0` fills it, height included,
+   since the section's height comes from its real content, not a fixed value) with no such
+   edge case, at the cost of scrolling with the section rather than staying viewport-pinned —
+   an acceptable trade for a section that can grow tall once Mission Guides is expanded. */
+.modern-hero-schedule-bg {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.modern-hero-schedule-video,
+.modern-hero-schedule-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* Bright enough to actually read as "an astronaut on the surface" (the reference's own
+     backdrop is clearly visible, not a near-black suggestion of one) — the gradient below
+     still carries the legibility work at the very top/bottom edges where text sits. */
+  opacity: 0.85;
+}
+
+/* Vignette concentrated at the top (nav) and bottom (card list fading toward whatever
+   follows) edges, plus a left-to-right wash: the left side (where the video's own subject —
+   the astronaut — actually stands) is left close to full brightness, darkening only toward
+   the right where the card column (.modern-hero-schedule-content) now sits, for legibility —
+   the reference composition's own "clear astronaut, readable cards" read, not a flat scrim or
+   a symmetric vignette that would darken the astronaut just as much as the cards. */
+.modern-hero-schedule-bg-gradient {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(9, 9, 11, 0.75) 0%,
+      rgba(9, 9, 11, 0.2) 25%,
+      rgba(9, 9, 11, 0.2) 60%,
+      rgba(9, 9, 11, 0.85) 100%
+    ),
+    linear-gradient(
+      to right,
+      rgba(9, 9, 11, 0) 0%,
+      rgba(9, 9, 11, 0) 38%,
+      rgba(9, 9, 11, 0.55) 68%,
+      rgba(9, 9, 11, 0.78) 100%
+    );
+}
+
+.modern-hero-schedule-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 4rem;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+}
+
+.modern-hero-schedule-title {
+  font-size: 2.5rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: -0.02em;
+  color: #fafafa;
+  margin: 0;
+}
+
+.modern-hero-schedule-subtitle {
+  color: #a1a1aa;
+  font-size: 0.95rem;
+  margin: 0.5rem 0 0;
+}
+
+.modern-hero-schedule-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  /* Player follow-up: shorter cards — less top/bottom padding (the thumbnail, not the text
+     block, was setting the card's real height before; shrinking it below is what let this
+     come down further without clipping anything). */
+  padding: 0.65rem 1.25rem;
+  margin-bottom: 0.6rem;
+  border-radius: 10px;
+  /* Solid-ish panel at rest, not just on hover (player request: "make the shortcuts section a
+     bit less transparent") — each shortcut now reads as its own card against the page. The
+     blur (same `blur(6px)` the nav/parallax cards already use) is what keeps this reading as
+     a glass panel instead of a flat tint now that there's a moving video behind it, not just
+     a static colour. */
+  background-color: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  transition:
+    background-color 0.2s,
+    border-color 0.2s;
+  /* ScheduleItem renders this as a real <button> when it's clickable (reference's own
+     full-row tap target, see modern-hero.tsx) — reset the button chrome back to how the div
+     version looked. */
+  width: 100%;
+  font: inherit;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+.modern-hero-schedule-item:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: #3f3f46;
+}
+
+/* Player-attached reference's own glow treatment on its first (default) card — a visible
+   NASA-blue ring, not just a brighter border, so the featured scenario reads as a real visual
+   difference, not just a subtle one. Icon+text elsewhere already carries which scenario is
+   which; this is decoration on top of real info, not the only way to tell them apart. */
+.modern-hero-schedule-item-featured {
+  border-color: var(--shell-accent, #0b3d91);
+  background-color: rgba(11, 61, 145, 0.12);
+  box-shadow:
+    0 0 0 1px rgba(96, 165, 250, 0.35),
+    0 0 24px rgba(37, 99, 235, 0.25);
+}
+
+.modern-hero-schedule-item-featured:hover {
+  background-color: rgba(11, 61, 145, 0.2);
+  border-color: #60a5fa;
+}
+
+.modern-hero-item-thumb {
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.modern-hero-item-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.modern-hero-item-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fafafa;
+  margin: 0 0 0.2rem;
+}
+
+.modern-hero-item-date {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: #71717a;
+  margin: 0;
+  letter-spacing: 0.05em;
+}
+
+/* The real site+duration line ("Jezero Crater · 30 Sols"), pin icon included — sits under the
+   title, replacing the old plain-text `.modern-hero-item-date` use here (that class still
+   serves the Mission Guides card's own subtitle, unchanged). */
+.modern-hero-item-site {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  color: #a1a1aa;
+  letter-spacing: 0.04em;
+  margin: 0;
+}
+
+/* The right-hand badge stack — body+duration always, an optional hazard/power-mode line
+   underneath it (reference's own two-line read for Jezero Outpost and The Long Night; First
+   Light has only the one line, same as the reference). */
+.modern-hero-item-stats {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.3rem;
+  flex-shrink: 0;
+}
+
+.modern-hero-item-stat {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  color: #d4d4d8;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.modern-hero-item-chevron {
+  flex-shrink: 0;
+  color: #71717a;
+  font-size: 1.25rem;
+}
+
+.modern-hero-schedule-item:hover .modern-hero-item-chevron {
+  color: #fff;
+}
+
+.modern-hero-item-action {
+  margin-left: 1.5rem;
+}
+
+.modern-hero-item-btn {
+  padding: 0.4rem 0.85rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.modern-hero-item-btn:hover {
+  background: var(--shell-accent, #0b3d91);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The 4th shortcut — a dropdown mission-guide picker, in the same schedule-item list but its
+   own layout (a select + toggle button instead of a single "Select" action, and an optional
+   expanded guide body below). */
+.modern-hero-guide-item {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+  padding: 1.75rem 1.25rem;
+  /* Unlike the three scenario cards, this one's still a plain `motion.div` (its own select
+     and toggle button are the real controls, not the row itself) — `.modern-hero-schedule-item`
+     now sets `cursor: pointer` for the button-based cards, which would mislead here. */
+  cursor: default;
+}
+
+.modern-hero-guide-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.modern-hero-item-title svg {
+  vertical-align: -2px;
+  margin-right: 0.4rem;
+}
+
+.modern-hero-guide-select {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.85rem;
+  border-radius: 6px;
+  background: #18181b;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #fff;
+}
+
+.modern-hero-guide-body {
+  border-top: 1px solid #27272a;
+  padding-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.modern-hero-guide-tagline {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #9fd0ff;
+  margin: 0;
+}
+
+.modern-hero-guide-body p {
+  color: #d4d4d8;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.modern-hero-guide-body .modern-hero-cta-btn {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+/* Player request: a real, structured step-by-step/failure-modes/controls guide, not another
+   wall of paragraphs — "even a non-science user can easily understand." */
+.modern-hero-guide-subhead {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #fff;
+}
+
+.modern-hero-guide-steps,
+.modern-hero-guide-failures {
+  margin: 0;
+  padding-left: 1.4rem;
+  color: #d4d4d8;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.modern-hero-guide-steps li::marker {
+  color: #9fd0ff;
+  font-weight: 700;
+}
+
+.modern-hero-guide-failures li::marker {
+  color: #f87171;
+}
+
+.modern-hero-guide-controls {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.modern-hero-guide-control-row {
+  padding: 0.6rem 0.8rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modern-hero-guide-control-row dt {
+  font-weight: 700;
+  color: #fff;
+  font-size: 0.88rem;
+}
+
+.modern-hero-guide-control-where {
+  display: block;
+  font-weight: 500;
+  font-size: 0.75rem;
+  color: #9fd0ff;
+  margin-top: 0.1rem;
+}
+
+.modern-hero-guide-control-row dd {
+  margin: 0.3rem 0 0;
+  color: #d4d4d8;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+/* Reduced motion & low-power overrides */
+@media (prefers-reduced-motion: reduce) {
+  .modern-hero-center-img,
+  .modern-hero-parallax-img,
+  .modern-hero-feature {
+    transform: none !important;
+  }
+
+  /* Belt-and-braces alongside ScheduleVideoBackground's own JS check (modern-hero.tsx) —
+     the component already skips mounting the <video> under reduced motion, this just makes
+     sure nothing shows/plays it if that ever changes. */
+  .modern-hero-schedule-video {
+    display: none;
+  }
+}
+
+.low-power-mode .modern-hero-center-img,
+.low-power-mode .modern-hero-parallax-img,
+.low-power-mode .modern-hero-feature {
+  transform: none !important;
+}
+
+.low-power-mode .modern-hero-schedule-video {
+  display: none;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  /* The right-aligned reading column (desktop: astronaut visible down the left, cards
+     right-aligned) has no room to also show the astronaut on a narrow viewport — full width,
+     same as every other breakpoint-collapsed layout in this file. */
+  .modern-hero-schedule {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .modern-hero-schedule-content {
+    max-width: none;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  .modern-hero-schedule-title {
+    font-size: 1.75rem;
+  }
+
+  .parallax-w-1-3,
+  .parallax-w-2-3,
+  .parallax-w-1-3-ml-auto,
+  .parallax-w-5-12 {
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  /* Padding cut on top of the margin/amplitude cuts below (player report, twice): the card's
+     own rendered height — title + wrapped body copy inside 1.5rem/1.75rem padding — was
+     itself a real chunk of the "gap," not just the space around it. Applies to every card,
+     not just the first, since a taller-than-needed card reads as empty space everywhere, not
+     only between images 1 and 2. */
+  .modern-hero-feature {
+    max-width: 90%;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 1.1rem 1.4rem;
+    text-align: left;
+  }
+
+  /* Player report (twice): too much scroll distance between the 1st and 2nd hero image on
+     mobile. Scoped to the first feature card only (the one sitting between image 1 and image
+     2) — the base 3.5rem top+bottom margin (7rem combined) was pure empty scroll there; a
+     first cut to 1.5rem wasn't enough on its own (the real remaining distance turned out to
+     be mostly ParallaxImg's own settle-position drift, cut separately in modern-hero.tsx), so
+     this goes further still. The other cards keep the base value: card 3 in particular relies
+     on it for the clearance .modern-hero-feature-extra-top's own mobile override already
+     tunes against, and touching that gap isn't what was reported. */
+  .modern-hero-feature-first {
+    margin-top: 0.85rem;
+    margin-bottom: 0.85rem;
+  }
+
+  /* The desktop-tuned 9rem gap (.modern-hero-feature-extra-top) is sized for the wide,
+     multi-column-feeling layout above this breakpoint; stacked full-width on mobile, the
+     base 3.5rem .modern-hero-feature margin is already enough clearance from the image above
+     it — a player report caught the desktop value still applying here and overlapping. */
+  .modern-hero-feature-extra-top {
+    margin-top: 3.5rem;
+  }
+
+  .modern-hero-nav {
+    padding: 0.75rem 1rem;
+  }
+
+  /* Player report: "reduce the Sol Keeper logo size on the header for mobile UI." The base
+     rule (26px) was never actually overridden here before — this breakpoint repeated the same
+     value, so mobile got the identical desktop-sized brand pill. Shrunk for real now, along
+     with the pill's own padding, so the whole lockup reads proportionally smaller, not just
+     the wordmark on its own. */
+  .modern-hero-brand {
+    padding: 0.3rem 0.6rem 0.3rem 0.7rem;
+  }
+
+  .modern-hero-team-logo {
+    height: 18px;
+  }
+
+  .modern-hero-title {
+    font-size: 0.8rem;
+  }
+
+  .modern-hero-by {
+    font-size: 0.65rem;
+  }
+
+  .modern-hero-nav-actions {
+    gap: 0.5rem;
+  }
+
+  .modern-hero-cta-btn {
+    font-size: 0.68rem;
+    padding: 0.5rem 0.7rem;
+    white-space: nowrap;
+  }
+
+  .modern-hero-schedule-head {
+    margin-bottom: 2rem;
+  }
+
+  .modern-hero-schedule-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+    /* Anchors the chevron (below) without needing a 5th wrapper element just for mobile. */
+    position: relative;
+  }
+
+  /* Stacked, the chevron reads better pinned to the card's own top-right corner than as an
+     orphaned icon below the stat lines. */
+  .modern-hero-item-chevron {
+    position: absolute;
+    top: 1.1rem;
+    right: 1.25rem;
+  }
+
+  .modern-hero-item-action {
+    margin-left: 0;
+  }
+}
+
+/* Below this, even the shrunk brand pill + CTA alone don't both fit one row (verified against
+   a real 412px-wide low-end-Android viewport, CLAUDE.md rule 6) — the secondary "Launch
+   Windows" scroll link is the one safe thing to drop: it only jumps to content already one
+   scroll away, unlike "Launch Outpost", which is the page's one real action. */
+@media (max-width: 480px) {
+  .modern-hero-nav-btn {
+    display: none;
+  }
+}
+
+/* Mission of the Day (Daily Solar Challenge) Section */
+.modern-hero-motd-section {
+  width: 100%;
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 7rem;
+  position: relative;
+  z-index: 10;
+}
+
+.modern-hero-motd-card {
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  padding: 1.75rem 2rem;
+  box-shadow: 0 0 32px rgba(245, 158, 11, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.modern-hero-motd-card:hover {
+  border-color: rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 40px rgba(245, 158, 11, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.modern-hero-motd-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding-bottom: 1.25rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modern-hero-motd-badge-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.modern-hero-motd-icon-title {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.modern-hero-motd-icon {
+  color: #f59e0b;
+  font-size: 1.35rem;
+}
+
+.modern-hero-motd-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fafafa;
+  letter-spacing: -0.01em;
+}
+
+.modern-hero-motd-seed-pill {
+  font-size: 0.72rem;
+  padding: 0.2rem 0.65rem;
+  border-radius: 9999px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+  color: #fbbf24;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.modern-hero-motd-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #a1a1aa;
+  font-size: 0.8rem;
+}
+
+.modern-hero-motd-grid {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 2rem;
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .modern-hero-motd-grid {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+}
+
+.modern-hero-motd-chip {
+  display: inline-block;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  padding: 0.15rem 0.55rem;
+  border-radius: 4px;
+  background: rgba(56, 189, 248, 0.14);
+  color: #38bdf8;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  margin-right: 0.6rem;
+}
+
+.modern-hero-motd-site {
+  font-size: 0.85rem;
+  color: #a1a1aa;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.modern-hero-motd-scenario-title {
+  margin: 0.4rem 0 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.modern-hero-motd-desc {
+  margin: 0 0 0.75rem;
+  font-size: 0.9rem;
+  color: #d4d4d8;
+  line-height: 1.5;
+}
+
+.modern-hero-motd-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: #a1a1aa;
+}
+
+.modern-hero-motd-sun-box {
+  padding: 1.25rem 1.35rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modern-hero-motd-sun-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+  color: #fafafa;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.modern-hero-motd-sun-text {
+  margin: 0 0 1rem;
+  font-size: 0.82rem;
+  color: #a1a1aa;
+  line-height: 1.45;
+}
+
+.modern-hero-motd-launch-btn {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #09090b;
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
+  transition: transform 0.15s, filter 0.15s, box-shadow 0.15s;
+}
+
+.modern-hero-motd-launch-btn:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.1);
+  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.45);
+}
+
+.modern-hero-motd-launch-btn:active {
+  transform: translateY(0);
+}
