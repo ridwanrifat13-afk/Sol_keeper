@@ -1,0 +1,3475 @@
+/*
+ * Sol Keeper — Operate view.
+ *
+ * Two constraints from the brief shape all of this (rule 6):
+ *   - status is never carried by colour alone. Each status class sets a *fill pattern* as
+ *     well as a hue, so the three levels stay distinguishable in greyscale, in bright
+ *     sunlight, and to a colour-blind player. The glyph and the status word are in the DOM.
+ *   - it has to run on a low-end Android phone. No animations beyond a colour transition,
+ *     no shadows on scrolling lists, system fonts only, single stylesheet.
+ */
+
+:root {
+  --bg: #0b1020;
+  --bg-panel: #141b31;
+  --bg-raised: #1d2642;
+  --line: #2b3557;
+  --text: #e8ecf8;
+  --text-dim: #9aa6c7;
+
+  --nominal: #4ade80;
+  --caution: #fbbf24;
+  --critical: #f87171;
+
+  /* M9.5: the outer app shell's own NASA blue-white — deliberately separate from --bg and
+     never applied inside a .panel (see the four "dark surface" resets below), so every
+     panel/gauge/console control keeps the neutral dark mission-control palette above
+     unchanged. One fixed look for every visitor (no OS-based override, unlike before). */
+  --shell-bg: #eef3fb;
+  --shell-accent: #0b3d91;
+  --shell-text: #131a2e;
+  --shell-text-dim: #4a5578;
+
+  --radius: 10px;
+  --gap: 12px;
+
+  --text-outline:
+    -1px -1px 0 rgba(255, 255, 255, 0.85), 1px -1px 0 rgba(255, 255, 255, 0.85),
+    -1px 1px 0 rgba(255, 255, 255, 0.85), 1px 1px 0 rgba(255, 255, 255, 0.85);
+  --text-outline-sm: 0 0 2px rgba(255, 255, 255, 0.95), 0 0 4px rgba(255, 255, 255, 0.7);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100vh;
+  padding: 0;
+  background: var(--shell-bg);
+  background-size: cover;
+  color: var(--text);
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  font-size: 16px;
+  line-height: 1.45;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Player request: a real lunar/Mars-surface photo behind every tab-nav destination
+ * (App.tsx's own `THEMED_BACKGROUND_VIEWS` sets `data-station-bg` on `<html>` — originally just
+ * the five station consoles, extended on request to Habitat/Briefing/Debrief too). Shown at
+ * full strength, no tint (player request — an earlier light-tint blend
+ * was tried first, then faded further, then dropped entirely here): `h1`/`.view-head`/
+ * `.mission-site` sit directly on this background (unlike every panel, gauge and button,
+ * which are opaque and so unaffected either way) — if a specific scenario's photo ever reads
+ * as too low-contrast under that text, that's a real brief-rule-6 issue to flag and fix
+ * locally (e.g. a text-shadow on the header), not a reason to silently re-add a global tint
+ * this instruction asked removed.
+ *
+ * `background-attachment: fixed` (player request — "fixed in the background") pins the photo
+ * to the viewport instead of the page, so it doesn't scroll past with the content; `cover`/
+ * `center` (unchanged) is what makes it fill the viewport cleanly at any window size ("fit
+ * in"). Flagged, not silently overridden: an earlier version of this file deliberately left
+ * `fixed` off here, on the documented grounds that a repainted fixed background is real
+ * scroll jank on a low-end Android phone (brief rule 6) — these station pages are short
+ * enough that the tradeoff seemed worth it when asked for directly, but if a real low-end
+ * device shows jank, that's the rule 6 concern materializing, not a surprise. Invisible on the
+ * five station consoles whenever Cockpit mode is active there (its own `.cockpit-frame` is
+ * opaque and covers the page) — see App.tsx's own doc comment on why this is still set
+ * unconditionally rather than only for Classic; always visible on Habitat/Briefing/Debrief,
+ * which have no cockpit mode to hide behind. */
+html[data-station-bg="moon"] body {
+  background-image: url("/images/station-bg-moon.jpg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+html[data-station-bg="mars"] body {
+  background-image: url("/images/station-bg-mars.jpg");
+  background-position: center;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+}
+
+.app {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+@media (min-width: 860px) {
+  /* Room for the left sidebar nav (player request) without squeezing the reading column it
+     used to have all to itself. */
+  .app {
+    max-width: 1600px;
+  }
+}
+
+/* Home (the marketing/launch page) is meant to run edge to edge, unlike every other view's
+   1100px reading column — App.tsx already applies this class only when view === "home", this
+   is just the rule that class needed but never had, which is why the hero used to render in
+   a narrow centered strip with the shell's own light background showing on both sides. */
+.app.app-full-bleed {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+}
+
+h1 {
+  font-size: 1.4rem;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+h2 {
+  font-size: 1rem;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+/* M9.5: shell-chrome text — the tab nav, mission header, console/wizard headers, clock, and
+   footer all sit directly on the new light --shell-bg, never inside a .panel, so they use the
+   new dark-on-light tokens instead of --text/--text-dim (which stay light, for the panels
+   below). Higher specificity than the bare h2/.view-hint patterns they share with in-panel
+   content, so nothing inside an actual .panel is affected. */
+.mission-head h1 {
+  color: var(--shell-text);
+  text-shadow: var(--text-outline);
+}
+
+.view-head h2 {
+  color: var(--shell-text);
+  text-shadow: var(--text-outline);
+}
+
+code {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.85em;
+  background: var(--bg-raised);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
+/* ---------------------------------------------------------------- status */
+/* The pattern is the accessibility mechanism, not decoration: it distinguishes the three
+   levels without relying on hue. */
+/* `--status-bg` is a fixed rgba per tier (not `color-mix()`, which this codebase hasn't used
+   anywhere else) — a tinted pill background for `.status-pill` below, same three tiers, no new
+   browser-support surface to worry about on a low-end phone (rule 6). */
+.is-nominal {
+  --status: var(--nominal);
+  --status-bg: rgba(74, 222, 128, 0.16);
+  --pattern: none;
+}
+.is-caution {
+  --status: var(--caution);
+  --status-bg: rgba(251, 191, 36, 0.16);
+  --pattern: repeating-linear-gradient(45deg, rgb(0 0 0 / 28%) 0 4px, rgb(0 0 0 / 0%) 4px 8px);
+}
+.is-critical {
+  --status: var(--critical);
+  --status-bg: rgba(248, 113, 113, 0.16);
+  --pattern: repeating-linear-gradient(90deg, rgb(0 0 0 / 40%) 0 2px, rgb(0 0 0 / 0%) 2px 5px);
+}
+/* Not a fourth alarm level — a fourth truth value. Before the first tick, a system is
+   neither confirmed powered nor confirmed shed; "not yet known" is a different fact from
+   "known and fine", so it gets its own neutral colour and glyph rather than borrowing
+   is-nominal's green and implying a result that hasn't happened yet. */
+.is-standby {
+  --status: var(--text-dim);
+  --status-bg: rgba(154, 166, 199, 0.14);
+  --pattern: none;
+}
+
+/* UI upgrade: a filled status pill (icon + word, on a tinted background), reused across
+   Mission Command and Habitat wherever a status already carries one of the three tiers above —
+   combine with `.is-nominal`/`.is-caution`/`.is-critical` the same way `.gauge`/`.crew-row`
+   already do, never a new colour-only signal (rule 6: the glyph + word inside travel with it). */
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--status);
+  background: var(--status-bg);
+  color: var(--status);
+  font-weight: 600;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- layout */
+.mission-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--gap);
+}
+
+.mission-site {
+  margin: 2px 0 0;
+  color: #000000;
+  font-weight: bold;
+  font-size: 0.85rem;
+  text-shadow: var(--text-outline-sm);
+}
+
+.run-badge {
+  border: 1px solid var(--status);
+  color: var(--status);
+  border-radius: 999px;
+  padding: 4px 14px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.run-badge-reason {
+  color: #000000;
+  font-weight: bold;
+  text-shadow: var(--text-outline-sm);
+}
+
+/* UI upgrade #1: one consistent panel-chrome system, everywhere. The accent-topped border
+   used to be scoped to just three M9 screens (setup wizard, habitat, mission command) — every
+   older station console (Power, Life Support, Comms, Incident Command), Briefing, Debrief,
+   Data Sources, and the Mission Report all used the plain, un-accented box below. Folded into
+   the base rule so the whole app reads as one deliberate system instead of some screens
+   looking more finished than others — headers/labels already share one h2 rule, so this was
+   the one remaining piece of chrome that wasn't actually consistent. */
+.panel {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(139, 147, 184, 0.06) 0px,
+      rgba(139, 147, 184, 0.06) 1px,
+      transparent 1px,
+      transparent 22px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(139, 147, 184, 0.06) 0px,
+      rgba(139, 147, 184, 0.06) 1px,
+      transparent 1px,
+      transparent 22px
+    ),
+    var(--bg-panel);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--shell-accent);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: var(--gap);
+}
+
+.panel-hint {
+  margin: 0 0 10px;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+.panel-detail {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 0.82rem;
+}
+
+.panel-detail summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.panel-detail p {
+  margin: 8px 0;
+  color: var(--text-dim);
+}
+
+/* Briefing's User Guide section (views/Briefing/BriefingView.tsx) — the same .panel-detail
+   collapsed-by-default wrapper above, holding real content (mission steps/failure modes,
+   control reference tables) rather than a single paragraph. */
+.briefing-guide-list {
+  margin: 8px 0;
+  padding-left: 1.25rem;
+  color: var(--text-dim);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+.briefing-guide-list li {
+  margin-bottom: 8px;
+}
+
+.briefing-guide-controls {
+  margin: 8px 0;
+}
+
+.briefing-guide-control-row {
+  padding: 8px 0;
+  border-top: 1px solid var(--line);
+}
+
+.briefing-guide-control-row:first-child {
+  border-top: none;
+}
+
+.briefing-guide-control-row dt {
+  font-weight: 600;
+  color: var(--text);
+  font-size: 0.88rem;
+}
+
+.briefing-guide-control-where {
+  display: block;
+  font-weight: 400;
+  color: var(--text-dim);
+  font-size: 0.78rem;
+  margin-top: 2px;
+}
+
+.briefing-guide-control-row dd {
+  margin: 4px 0 0;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+/* `.two-col`'s own `gap` (both here and at 760px+ below) replaces each child's individual
+   `margin-bottom` entirely — grid gap plus every panel's own margin would double up the space
+   between them, at any width, not just above the breakpoint, so the reset lives right beside
+   the grid it belongs to rather than only inside the media query.
+
+   `minmax(0, 1fr)`, not bare `1fr`: a plain `1fr` track's minimum size defaults to its
+   content's own min-content width, so a single un-shrinkable child (this file's own
+   launch-packing-table/esm-table `min-width`, or an iframe with no min-width at all) silently
+   blows the whole track — and with it `.console`, and with it the page — out past the real
+   viewport, confirmed directly: a real mobile-width measurement showed a 650px-wide grid track
+   inside a 390px viewport once one of these panels sat inside it. `minmax(0, 1fr)` caps the
+   track's own minimum at 0 instead, so it actually shrinks to fit; a genuinely wide child keeps
+   scrolling horizontally inside its own column (its own `.table-scroll` wrapper, already built
+   for exactly this) rather than dragging the whole page wider than the screen. */
+.two-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--gap);
+}
+
+.two-col > * {
+  margin-bottom: 0;
+}
+
+@media (min-width: 760px) {
+  .two-col {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* Professional-dashboard packing (components/DashboardGrid.tsx). The plain `.two-col` grid
+   aligns panels into rows and stretches the shorter panel of each row to match the taller one
+   — blank space inside a tab. `align-items: start` alone fixes the stretch (fallback before
+   measurement, server render, tests); once DashboardGrid has measured, `data-masonry="on"`
+   switches to 1px implicit rows and each panel gets `grid-row-end: span <height + gap>`, so
+   every panel is exactly its own content height and the next one fills the shorter column.
+   `row-gap: 0` because the gap is already inside each panel's span. */
+.dashboard-grid {
+  align-items: start;
+}
+
+.dashboard-grid[data-masonry="on"] {
+  grid-auto-rows: 1px;
+  row-gap: 0;
+}
+
+.dashboard-grid > * {
+  align-self: start;
+}
+
+/* Compact tile grid for short "name + one action/line" lists (Habitat's per-system maintenance,
+   Briefing's crew roster): auto-fit tiles fill the panel's width, instead of a one-per-row list
+   with a wide empty gutter between each label and its value. */
+.chip-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 8px;
+}
+
+.chip-grid-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  min-width: 0;
+}
+
+.chip-grid-stack {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: flex-start;
+  gap: 2px;
+}
+
+.chip-grid-label {
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+.chip-grid-sub {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.chip-grid-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.chip-grid-action-wide {
+  width: 100%;
+  justify-content: space-between;
+}
+
+/* A bounded, scrollable widget body (long evidence tables): a dashboard tile shouldn't be 1000px
+   tall and leave a hole beside it in the other column. The element carries tabindex/role in the
+   markup so a keyboard user can scroll it. */
+.panel-scroll {
+  max-height: 24rem;
+  overflow: auto;
+}
+
+/* Drag-to-reorder (components/dashboardReorder.ts). The heading is the drag handle: a grip drawn
+   with a dot pattern (no emoji/glyph), a grab cursor, and `touch-action: pan-y` so a touch on
+   it can still scroll the page until the long-press lifts the panel. */
+.dashboard-grid [data-drag-handle] {
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  border-radius: 4px;
+}
+
+.dashboard-grid [data-drag-handle]::before {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 14px;
+  margin-right: 8px;
+  vertical-align: -2px;
+  background: radial-gradient(circle, currentColor 1.2px, transparent 1.5px) 0 0 / 5px 5px;
+  opacity: 0.45;
+}
+
+.dashboard-grid [data-drag-handle]:hover::before,
+.dashboard-grid [data-drag-handle]:focus-visible::before {
+  opacity: 0.9;
+}
+
+.dashboard-grid [data-drag-handle]:focus-visible {
+  outline: 2px solid var(--shell-accent);
+  outline-offset: 3px;
+}
+
+.dashboard-grid.is-reordering,
+.dashboard-grid.is-reordering * {
+  cursor: grabbing !important;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* An iframe swallows pointer events that belong to the drag, so it goes inert mid-drag. */
+.dashboard-grid.is-reordering iframe {
+  pointer-events: none;
+}
+
+.dashboard-item-lifted {
+  position: relative;
+  z-index: 30;
+  box-shadow:
+    0 28px 60px -16px rgba(0, 0, 0, 0.55),
+    0 10px 24px -8px rgba(0, 0, 0, 0.4);
+  will-change: transform;
+}
+
+.dashboard-item-settling {
+  position: relative;
+  z-index: 20;
+}
+
+@media print {
+  .dashboard-grid[data-masonry="on"] {
+    display: block;
+  }
+
+  .dashboard-grid > * {
+    margin-bottom: var(--gap);
+  }
+}
+
+/* Player request: every station console was one long stacked column of panels/tables, however
+   wide the screen — arrange them two-wide instead so a wide screen actually gets used, not
+   just centred inside a narrower reading column. Reuses `.two-col` above (defined but unused
+   until now) rather than a second, near-identical grid rule. Below 760px `.two-col` itself
+   already falls back to a single column, still using grid `gap` for spacing rather than each
+   panel's own margin — the same visual rhythm the old plain stack had, just via the rule that
+   also has to handle two columns above the breakpoint. Grid's own row-major auto-placement
+   keeps DOM/reading order untouched: a screen reader or keyboard user still moves through
+   panels in the exact order they're written in, this only changes where each one paints. */
+@media (min-width: 760px) {
+  /* A page's own heading, any alert banner, and Debrief's own action-button row always read
+     oddly at half width — sized for the full column regardless of which two-panel row they'd
+     otherwise fall into. */
+  .console.two-col > .view-head,
+  .console.two-col > .inline-alert,
+  .console.two-col > .debrief-actions {
+    grid-column: 1 / -1;
+  }
+
+  /* Player-named exceptions: the orbital display, the habitat scene, the landing-site map, and
+     the dependency graph all stay full width — each one is either inherently wide (a live
+     video/map/graph needs real room to be legible) or was explicitly asked to be left alone. */
+  .panel-span-full {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ---------------------------------------------------------------- buttons */
+.button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.btn {
+  background: var(--bg-raised);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 14px;
+  font: inherit;
+  font-size: 0.88rem;
+  cursor: pointer;
+  /* 44px minimum touch target. */
+  min-height: 44px;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* `.btn` is a column so a `.btn-sub` caption can sit under the label; a leading icon should sit
+   beside the label instead of stacking above it. */
+.btn:has(> svg:first-child) {
+  flex-direction: row;
+  gap: 6px;
+}
+
+.btn > svg {
+  flex: none;
+}
+
+.btn:hover:not(:disabled) {
+  border-color: var(--text-dim);
+}
+
+.btn:focus-visible {
+  outline: 3px solid var(--nominal);
+  outline-offset: 2px;
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-active {
+  border-color: var(--text);
+  background: var(--text);
+  color: var(--bg);
+  font-weight: 700;
+}
+
+.btn-quiet {
+  color: var(--text-dim);
+}
+
+.btn-tiny {
+  min-height: 34px;
+  min-width: 34px;
+  padding: 2px 8px;
+}
+
+.btn-sub {
+  display: block;
+  font-size: 0.68rem;
+  opacity: 0.75;
+  font-weight: 400;
+}
+
+/* ---------------------------------------------------------------- clock */
+.time-controls {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(139, 147, 184, 0.06) 0px,
+      rgba(139, 147, 184, 0.06) 1px,
+      transparent 1px,
+      transparent 22px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(139, 147, 184, 0.06) 0px,
+      rgba(139, 147, 184, 0.06) 1px,
+      transparent 1px,
+      transparent 22px
+    ),
+    var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: var(--gap);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  align-items: center;
+}
+
+.clock {
+  display: flex;
+  flex-direction: column;
+  min-width: 96px;
+}
+
+.clock-sol {
+  /* `.time-controls` is a dark `.bg-panel`, not the light shell background this token pair is
+     meant for (the same real mismatch `.overlay-panel .view-head h2` already documents its own
+     fix for, further down this file) — confirmed directly: this color computed to rgb(19,26,46)
+     against a panel background of rgb(20,27,49), functionally invisible. */
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+
+/* Player request: "highlight the hour count in the sol pause/resume bar." A small accent-blue
+   badge (the same brand blue the speed row's own active state and the hero's CTA already use),
+   not just a brighter grey — real visual weight, not merely "less dim than before" (which is
+   all fixing the --shell-text/--text mismatch above would have given it on its own). */
+.clock-hour {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin-top: 2px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg, #0b3d91 0%, #1e5bc6 100%);
+  box-shadow: 0 0 10px rgba(30, 91, 198, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+.sol-countdown {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  align-self: center;
+}
+
+/* Player request: "optimize the sol pause/resume bar to make it look highlighted." Scoped to
+   just the speed row (Paused/1x/4x/16x) inside TimeControls/ReplayControls, not `.btn-active`
+   generally -- that class is shared with the Setup wizard's scenario cards, the Reality Dial
+   switch, and Launch Packing's phase tabs, none of which were part of this report. A real
+   accent colour + glow (the same brand blue used for the hero's own CTA button), not just a
+   brighter grey -- but still paired with the bold weight and border `.btn-active` already
+   carries, so the current speed is never conveyed by colour alone (rule 6). */
+.time-controls .btn-active,
+.replay-controls .btn-active {
+  background: linear-gradient(135deg, #0b3d91 0%, #1e5bc6 100%);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.3);
+  box-shadow: 0 0 14px rgba(30, 91, 198, 0.55);
+}
+
+/* ---------------------------------------------------------------- gauges */
+/* flex-wrap, not an auto-fit grid: a grid leaves an empty cell beside a lone last gauge (five
+   gauges in two columns), while a wrapping flex row stretches that last gauge to fill its row —
+   no blank space inside the panel. */
+.gauge-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.gauge-grid > .gauge {
+  flex: 1 1 210px;
+  min-width: 0;
+}
+
+.gauge {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--status);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.gauge-head {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  font-size: 0.78rem;
+}
+
+.gauge-icon {
+  color: var(--status);
+  font-size: 1rem;
+}
+
+.gauge-label {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.gauge-help-toggle {
+  background: var(--bg);
+  color: var(--text-dim);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  width: 22px;
+  height: 22px;
+  line-height: 1;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+  /* Visual size stays small so it doesn't dominate the gauge head; the tap target is
+     widened with padding via a pseudo-hitbox rather than growing the visible circle. */
+  position: relative;
+}
+
+.gauge-help-toggle::after {
+  content: "";
+  position: absolute;
+  inset: -11px;
+}
+
+.gauge-help-toggle:hover {
+  border-color: var(--text-dim);
+  color: var(--text);
+}
+
+.gauge-status {
+  margin-left: auto;
+  color: var(--status);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gauge-help-text {
+  margin: 4px 0 0;
+  padding: 6px 8px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  line-height: 1.4;
+}
+
+.gauge-value-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 3px 0 6px;
+}
+
+.gauge-value {
+  font-size: 1.35rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* UI upgrade #3: a trend sparkline beside the gauge's own big number, coloured with the same
+   --status var the fill bar and icon already use — decorative (Sparkline.tsx is aria-hidden),
+   the real number and status stay in the text next to it (rule 6). */
+.gauge-sparkline {
+  width: 56px;
+  height: 18px;
+  flex-shrink: 0;
+  color: var(--status);
+  opacity: 0.85;
+}
+
+.gauge-track {
+  height: 10px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.gauge-fill {
+  height: 100%;
+  background-color: var(--status);
+  background-image: var(--pattern);
+  transition: width 200ms linear;
+}
+
+.gauge-detail {
+  margin-top: 6px;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.inline-alert {
+  margin: 12px 0 0;
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--status);
+  color: var(--status);
+  background-image: var(--pattern);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- priorities */
+.priority-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.priority-row {
+  display: grid;
+  grid-template-columns: 24px 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--status);
+  border-radius: 8px;
+  padding: 6px 10px;
+}
+
+.priority-rank {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+}
+
+.priority-name {
+  font-size: 0.88rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.priority-power {
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.priority-state {
+  color: var(--status);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.priority-actions {
+  display: flex;
+  gap: 4px;
+}
+
+/* ---------------------------------------------------------------- crew */
+.crew-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.crew-row {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--status);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  font-size: 0.8rem;
+}
+
+/* UI upgrade (Mission Command/Habitat): the crew row's name + a real status-coloured initials
+   avatar (Avatar.tsx) share their own full-width row, so the stat spans below still wrap the
+   same way they always did — only .crew-name lost `flex-basis: 100%` to its new wrapper. */
+.crew-row-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-basis: 100%;
+}
+
+.avatar-circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--status-bg);
+  border: 1.5px solid var(--status);
+  color: var(--status);
+  font-size: 0.7rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.crew-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.crew-lost {
+  color: var(--critical);
+  font-weight: 400;
+}
+
+.crew-stat {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.crew-dose {
+  flex-basis: 100%;
+}
+
+/* .crew-dose-limit intentionally carries no styling of its own: it inherits .crew-stat's
+   --text-dim colour, which is already the deliberately de-emphasized token. An earlier
+   `opacity: 0.8` stacked on top of that pushed contrast below WCAG AA — caught by a real
+   Lighthouse accessibility audit, not a visual guess. */
+
+/* Player request: a standalone "Crop conditions" content box (LifeSupportConsole.tsx) — the
+   same real-status-coloured card look `.crew-row` already uses, not a plain list, since each
+   row now carries a status tier and its own mini bar. */
+.crop-conditions-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.crop-conditions-row {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--status);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px 12px;
+}
+
+.crop-conditions-name {
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.crop-conditions-stat {
+  display: inline-flex;
+  align-items: center;
+  color: var(--status);
+  font-weight: 600;
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------------------------------------------------------------- events */
+.event-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.event-card {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--status);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.event-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.72rem;
+  margin-bottom: 3px;
+}
+
+.event-sev {
+  color: var(--status);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.event-time {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.event-text {
+  margin: 0;
+  font-size: 0.86rem;
+}
+
+.event-cause {
+  margin: 5px 0 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--line);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+
+.event-empty {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  padding: 10px 0;
+}
+
+.event-alternatives {
+  margin: 5px 0 0;
+  padding-left: 8px;
+  border-left: 2px dashed var(--line);
+  color: var(--text-dim);
+  font-size: 0.75rem;
+}
+
+.event-alternatives-label {
+  margin: 0 0 2px;
+  font-weight: 600;
+}
+
+.event-alternatives ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.event-alternative-mechanism {
+  font-style: italic;
+}
+
+/* ---------------------------------------------------------------- credits */
+.credits {
+  color: #000000;
+  font-weight: bold;
+  font-size: 0.75rem;
+  padding: 4px 2px 24px;
+  text-shadow: var(--text-outline-sm);
+}
+
+.credits p {
+  margin: 0 0 6px;
+}
+
+.credits-fine {
+  opacity: 0.8;
+}
+
+/* ---------------------------------------------------------------- tab nav */
+/* Player request: the station/tab destinations sit in a left sidebar, serially, not a top
+   row. .app-shell is the two-column layout (nav | main); below the sidebar breakpoint it
+   stacks into the original top-row arrangement instead — a real low-end-Android phone (rule
+   6) does not have the width for a persistent sidebar, so this is a genuine layout switch,
+   not just a visual reflow. */
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.app-main {
+  min-width: 0;
+}
+
+@media (min-width: 860px) {
+  .app-shell {
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 24px;
+  }
+
+  .app-main {
+    flex: 1;
+  }
+}
+
+/* Player request: "a navigation bar for the pages on mobile ui too." Below the sidebar
+   breakpoint this is now an off-canvas drawer (opened by .mobile-nav-toggle in
+   .app-head-actions), not the horizontal scrolling strip it used to be — with eight real
+   destinations, a strip needing its own horizontal scroll to reach the last few was a worse
+   "navigation bar" than a real menu, not a lesser version of one. */
+.tab-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(78vw, 280px);
+  /* Player report: opening the drawer, its own first item sat right under the Menu button
+     that opens it — both start near the same top-left corner, the toggle at `.app-head-
+     actions`'s own (unmeasured-by-CSS) position in normal flow, confirmed by measuring it
+     directly at y:20, height:44, so its bottom edge is at y:64. The drawer's own top padding
+     used to be 16px, so its first tab-button (16px to 60px) sat almost exactly under the
+     toggle. This clears that edge by 8px — enough on its own now that the space right below
+     it holds a real element (`.app-brand`, its own padding/border adding further real
+     separation from the first tab button) rather than needing extra bare padding to read as
+     "separated." The toggle itself stays visually above the drawer (z-index 101, see below)
+     precisely so it's still the one thing that closes the drawer again, so the fix is giving
+     the drawer's own content room to start below it, not lowering the toggle's stacking
+     order. */
+  padding: 72px 10px 16px;
+  background: var(--shell-bg);
+  border-right: 1px solid var(--line);
+  overflow-y: auto;
+  z-index: 100;
+  transform: translateX(-100%);
+  transition: transform 0.2s ease;
+  /* Closed still means genuinely non-interactive, not just visually off-canvas — mid-close,
+     the 200ms transform transition leaves the drawer's own hit-test area still overlapping
+     real content for a moment, real enough to swallow the very next click (e.g. the coach
+     mark's "Skip tutorial" button, which can appear the instant a tab click closes this). */
+  pointer-events: none;
+}
+
+.tab-nav.tab-nav-open {
+  transform: translateX(0);
+  box-shadow: 4px 0 24px rgba(0, 0, 0, 0.25);
+  pointer-events: auto;
+}
+
+.mobile-nav-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 99;
+}
+
+/* Player request: the Home hero's own "Sol Keeper" brand mark, on every other page too --
+   "without a header, just the logo." Lives at the top of `.tab-nav` (BrandMark.tsx), so it's
+   shared, unmodified markup between the mobile drawer and the desktop sidebar rather than two
+   separate placements. Styled for the shell's own light chrome (`--shell-text`/`--shell-
+   accent`), not a copy of the Home hero nav's dark-pill version -- that one is tuned for
+   sitting over a photo background, this one sits on plain `--shell-bg`. */
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px 14px;
+  margin: 0 0 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.app-brand-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--shell-accent);
+}
+
+.app-brand-logo {
+  height: 20px;
+  width: auto;
+  object-fit: contain;
+}
+
+@media (min-width: 860px) {
+  .mobile-nav-toggle,
+  .mobile-nav-backdrop {
+    display: none;
+  }
+
+  .tab-nav {
+    position: sticky;
+    top: 24px;
+    left: auto;
+    bottom: auto;
+    flex: none;
+    width: 190px;
+    min-width: 190px;
+    padding: 0 0 4px;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    overflow-y: visible;
+    overflow-x: hidden;
+    z-index: auto;
+    transform: none;
+    transition: none;
+    box-shadow: none;
+    pointer-events: auto;
+  }
+}
+
+/* Player request: while a station's cockpit view is active, the photo should reach the
+   browser window's own corners — the sidebar nav floats on top of it instead of reserving
+   its own column that would shrink the frame. StationCockpit.tsx toggles this class on
+   <html> (not a prop) since only one station view is ever mounted at a time — see that
+   file's own doc comment. `.app`'s own max-width (the same shape `.app-full-bleed` already
+   uses for Home) is what actually frees the width; removing `.tab-nav` from the flex flow
+   below then lets `.app-main` (flex: 1, the only remaining flex item) claim all of it
+   automatically, no extra width rule needed.
+
+   The header/toolbar chrome above the photo (mission title, time controls, the Cockpit/
+   Classic toggle itself) stays indented past the floating sidebar's own footprint — only
+   `.cockpit-frame` breaks back out to the true left edge, under the sidebar, since it's the
+   one thing meant to sit behind it. Without this split, that chrome would render flush at
+   x:0, directly underneath the floating sidebar, fully obscured (caught exactly this in a
+   screenshot before adding the split). SIDEBAR_FOOTPRINT_PX below (230 = 20px inset + 190px
+   width + 20px gap) has to stay in sync with the fixed-position numbers in the next rule by
+   hand — CSS has no shared-constant mechanism across two separate declarations like this. */
+html.cockpit-active .app {
+  max-width: none;
+  padding-left: 0;
+  padding-right: 0;
+}
+
+@media (min-width: 860px) {
+  /* Player request: shorter (hugs its own nav items instead of stretching to the window's
+     bottom edge — `bottom: 20px` removed, `max-height` only as a safety net on a short
+     viewport) and translucent (a blurred, partly see-through panel reads as a HUD floating
+     over the photo, rather than an opaque card sitting on top of it). */
+  html.cockpit-active .tab-nav {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    z-index: 50;
+    background: rgba(238, 243, 251, 0.8);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  }
+
+  /* SIDEBAR_FOOTPRINT_PX = 230, see the shared comment above. */
+  html.cockpit-active .app-main {
+    padding-left: 230px;
+  }
+
+  html.cockpit-active .cockpit-frame {
+    margin-left: -230px;
+    width: calc(100% + 230px);
+  }
+}
+
+.language-switch {
+  display: flex;
+  gap: 4px;
+  padding-top: 4px;
+}
+
+/* Both the mobile drawer and the desktop sidebar are vertical lists now (player request), so
+   this is the one, shared style — no per-breakpoint override needed. A left border + a
+   filled background is the active indicator; never colour alone (rule 6) — the bold text
+   weight carries it too. */
+.tab-button {
+  background: transparent;
+  border: none;
+  border-left: 3px solid transparent;
+  border-radius: 0 12px 12px 0;
+  color: var(--shell-text-dim);
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 10px 14px;
+  cursor: pointer;
+  min-height: 44px;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  width: 100%;
+  transition:
+    transform 0.2s cubic-bezier(0.2, 0, 0, 1),
+    color 0.2s ease,
+    background 0.2s ease;
+}
+
+.tab-button:hover {
+  color: var(--shell-text);
+  transform: scale(1.12);
+  transform-origin: left center;
+}
+
+.tab-button:focus-visible {
+  outline: 3px solid var(--nominal);
+  outline-offset: -2px;
+}
+
+.tab-button-active {
+  color: var(--shell-text);
+  border-left-color: var(--shell-accent);
+  background: rgba(11, 61, 145, 0.09);
+}
+
+.tab-badge {
+  color: var(--nominal);
+  font-size: 0.6rem;
+}
+
+.tab-button-exit {
+  margin-top: 1.5rem;
+  color: #f87171 !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  font-weight: 600;
+}
+
+.tab-button-exit:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #fca5a5 !important;
+}
+
+/* ---------------------------------------------------------------- app head actions (M8.3) */
+.app-head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 4px;
+  margin-bottom: var(--gap);
+  flex-wrap: wrap;
+}
+
+/* The drawer (.tab-nav, z-index 100) sits at the left edge of the screen, the same place the
+   toggle that opens it lives — without its own higher stacking context, opening the drawer
+   would cover the one button that closes it again, with no other visible way to dismiss it
+   except tapping the backdrop, a real usability bug, not just a test artifact. */
+.mobile-nav-toggle {
+  position: relative;
+  z-index: 101;
+  gap: 6px;
+}
+
+/* Player report: the Menu button reads too large next to the other header actions on a
+   narrow phone. Icon-only below 480px (matching the hero nav's own 480px cutoff for
+   secondary chrome) — the accessible name comes from the button's own `aria-label`, not
+   this text, so nothing is lost for assistive tech; `min-height`/`min-width` below keep the
+   44px touch target the rest of `.btn` already guarantees, just narrower, not shorter. */
+@media (max-width: 480px) {
+  .mobile-nav-toggle-label {
+    display: none;
+  }
+
+  .mobile-nav-toggle {
+    padding: 9px 11px;
+    min-width: 44px;
+  }
+}
+
+.overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  z-index: 100;
+}
+
+.overlay-panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 18px;
+  max-width: 900px;
+  width: 100%;
+  position: relative;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  margin: auto;
+}
+
+/* M9.5: Data Sources (and Sol Summary) reuse the .view-head/.view-hint shell-chrome pattern
+   for their own heading, but they render inside this dark .overlay-panel, not on the shell
+   background — back to the panel-friendly light tokens here, overriding the shell-text
+   defaults by selector specificity. */
+.overlay-panel .view-head h2 {
+  color: var(--text);
+}
+
+.overlay-panel .view-hint {
+  color: var(--text-dim);
+  /* Player request: the base `.view-hint` rule's `text-shadow` (a light-background readability
+     outline, for Debrief's own themed backdrop) just muddies this text against the Data
+     Sources overlay's own plain dark panel — there's no bright background here to outline
+     against, so it only ever worked against legibility in this one context. */
+  text-shadow: none;
+}
+
+.overlay-close {
+  position: sticky;
+  top: 0;
+  float: right;
+}
+
+/* M11: `?debug=1`'s FPS/memory/tick panel (docs/DEVICE_TEST.md). Fixed, small, and out of the
+   way of the real UI it's measuring — a corner readout, not a dialog. */
+.debug-overlay {
+  position: fixed;
+  bottom: 8px;
+  right: 8px;
+  z-index: 200;
+  background: rgba(0, 0, 0, 0.75);
+  color: #fff;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  padding: 6px 10px;
+  border-radius: 6px;
+  pointer-events: none;
+}
+
+.debug-overlay-row {
+  margin: 0;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- run-link banner (M10.6) */
+.run-link-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--caution);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: var(--gap);
+}
+
+.run-link-banner p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.run-link-banner-close {
+  flex-shrink: 0;
+}
+
+/* ---------------------------------------------------------------- copy-link button (M10.7) */
+.copy-link {
+  margin: 8px 0;
+}
+
+.class-link-row {
+  margin: 12px 0;
+}
+
+.copy-link-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 6px;
+}
+
+.copy-link-status {
+  color: var(--nominal);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.copy-link-input {
+  flex: 1 1 260px;
+  min-width: 0;
+  background: var(--bg-raised);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 0.8rem;
+}
+
+/* ---------------------------------------------------------------- coach mark (onboarding) */
+.coach-mark {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  left: 16px;
+  max-width: 380px;
+  margin-left: auto;
+  background: var(--bg-panel);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--nominal);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  z-index: 80;
+}
+
+.coach-mark-step {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+
+.coach-mark-text {
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.coach-mark-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+/* ---------------------------------------------------------------- dial switch */
+.dial-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: var(--gap);
+}
+
+.btn-dial {
+  flex: 1 1 140px;
+}
+
+/* ---------------------------------------------------------------- scenario switch */
+.scenario-switch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: var(--gap);
+}
+
+.btn-scenario {
+  flex: 1 1 160px;
+}
+
+/* ---------------------------------------------------------------- mission setup wizard (M9) */
+.setup-crew-size-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 80px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Player request: name your own crew. */
+.setup-crew-names-heading {
+  margin: 18px 0 2px;
+  font-size: 0.9rem;
+  color: var(--text);
+}
+
+.setup-crew-names-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.setup-crew-name-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.setup-crew-name-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-dim);
+}
+
+.setup-crew-name-input {
+  background: var(--bg-raised);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font: inherit;
+  font-size: 0.9rem;
+  min-height: 44px;
+}
+
+.setup-crew-name-input:focus-visible {
+  outline: 3px solid var(--nominal);
+  outline-offset: 1px;
+}
+
+.landing-site-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.landing-site-card {
+  flex: 1 1 260px;
+  align-items: stretch;
+  text-align: left;
+}
+
+.landing-site-card-name {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.landing-site-caveat {
+  margin-top: 8px;
+  margin-bottom: 0;
+}
+
+.confidence-badge {
+  color: var(--status);
+  font-weight: 600;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.setup-sized-numbers {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- view heads (Debrief, Data Sources) */
+.view-head {
+  margin-bottom: var(--gap);
+}
+
+.view-head h2 {
+  font-size: 1.3rem;
+  margin: 0 0 4px;
+}
+
+.view-hint {
+  color: #000000;
+  font-weight: bold;
+  font-size: 0.85rem;
+  margin: 0;
+  text-shadow: var(--text-outline-sm);
+}
+
+/* ---------------------------------------------------------------- debrief: final numbers */
+.final-numbers {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.final-number {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--status);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.final-number dt {
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.final-number dd {
+  margin: 2px 0 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+/* ---------------------------------------------------------------- debrief: incidents */
+.incident-list,
+.condition-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.incident-row {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.incident-head {
+  display: flex;
+  gap: 10px;
+  font-size: 0.86rem;
+  margin-bottom: 4px;
+}
+
+.incident-time {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.incident-effects {
+  margin: 0;
+  padding-left: 8px;
+  border-left: 2px solid var(--line);
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+
+/* ---------------------------------------------------------------- debrief: crew loss */
+.crew-loss-report {
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.crew-loss-report:last-child {
+  border-bottom: none;
+}
+
+.crew-loss-headline {
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.condition-row {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 0.82rem;
+}
+
+/* ---------------------------------------------------------------- debrief: full timeline */
+/* Unbounded height here made a completed 30-sol run's debrief page tens of thousands of
+   pixels tall — hundreds of full-size cards, one per log entry, with no way to see the page
+   as a whole. Bounded and scrollable, like the live feed, but taller: this is the "look at
+   everything" record, not a rolling window of the last 40 events. */
+.event-list-full {
+  max-height: 640px;
+}
+
+/* ---------------------------------------------------------------- data sources */
+.credit-line {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.source-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.source-row {
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.source-row-head {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.78rem;
+  margin-bottom: 4px;
+}
+
+.source-id {
+  font-weight: 700;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+.source-count {
+  color: var(--text-dim);
+}
+
+.source-title {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+}
+
+.source-title a {
+  color: inherit;
+}
+
+.source-used-for {
+  margin: 0 0 4px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.source-confidence {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* M11: docs/DATA_SOURCES.md's own ☐/☑ Status column, mirrored here. Icon (a filled vs.
+   hollow circle) + text, never color alone (brief rule 6) — the color is a bonus for
+   sighted players who do distinguish it, not the only signal. */
+.source-verification {
+  margin: 0 0 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.source-verified {
+  color: var(--nominal);
+}
+
+.source-unverified {
+  color: var(--text-dim);
+}
+
+.placeholder-list,
+.simplification-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.simplification-list {
+  list-style: disc;
+  padding-left: 1.2em;
+}
+
+.simplification-list li {
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.placeholder-row {
+  background: var(--bg-raised);
+  border: 1px solid var(--caution);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.placeholder-note {
+  margin: 4px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+}
+
+/* ---------------------------------------------------------------- ESM budget */
+.esm-cadet-headline {
+  font-size: 1.15rem;
+  font-weight: 700;
+  margin: 6px 0 0;
+}
+
+.esm-total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+
+.esm-total-label {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.esm-total-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.esm-table {
+  /* min-width is what actually makes `.table-scroll` (EsmPanel.tsx) scroll instead of just
+     compressing six columns unreadably on a phone — same reasoning as launch-packing-table's
+     own min-width, right below the note that explains why width:100% alone can't do this. */
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+
+.esm-table th {
+  text-align: left;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.esm-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+
+/* UI upgrade: a faint zebra stripe (the same reason a real data table gives one — a wide row
+   with six numeric columns is otherwise easy to lose your place on) — kept faint enough that
+   the row itself never becomes the only way any fact here is told apart (rule 6 still rests on
+   the text in each cell, not this). */
+.esm-table tbody tr:nth-child(even) {
+  background: rgba(139, 147, 184, 0.05);
+}
+
+.esm-not-sourced {
+  font-size: 0.72rem;
+}
+
+.esm-table td:last-child,
+.esm-table th:last-child {
+  text-align: right;
+}
+
+.esm-disclosure {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+.esm-partial-mark {
+  color: var(--text-dim);
+}
+
+.esm-table-note {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin: 0 0 10px;
+}
+
+/* ---------------------------------------------------------------- ripple web */
+.ripple-svg {
+  display: block;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.ripple-edge {
+  stroke: var(--line);
+  stroke-width: 1.5;
+}
+
+.ripple-node circle {
+  fill: var(--bg-panel);
+  stroke: var(--status);
+  stroke-width: 3;
+}
+
+.ripple-node-label {
+  fill: var(--text);
+  font-size: 11px;
+}
+
+.ripple-node-glyph {
+  fill: var(--status);
+  font-size: 13px;
+}
+
+.ripple-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.ripple-table th {
+  text-align: left;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ripple-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.ripple-table td.is-nominal,
+.ripple-table td.is-caution,
+.ripple-table td.is-critical,
+.ripple-table td.is-standby {
+  color: var(--status);
+  font-weight: 600;
+}
+
+/* UI upgrade (Habitat): a small inline bar beside a table fact's own text (MiniBar.tsx) —
+   decorative, the percentage in the cell's own text is the real fact (rule 6). */
+.mini-bar-track {
+  display: inline-block;
+  width: 60px;
+  height: 6px;
+  margin-left: 8px;
+  vertical-align: middle;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.mini-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--status);
+}
+
+.ripple-evidence-cell {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+
+/* ---------------------------------------------------------------- live sky (M5) */
+.panel-head-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.provenance-badge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.provenance-badge.is-live {
+  color: var(--nominal);
+}
+
+.provenance-badge.is-snapshot,
+.provenance-badge.is-loading {
+  color: var(--text-dim);
+}
+
+.provenance-badge.is-historical {
+  color: var(--caution);
+}
+
+.provenance-badge.is-archived {
+  color: #58a6ff;
+  border: 1px solid rgba(88, 166, 255, 0.3);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.live-sky-distance {
+  font-size: 1.4rem;
+  font-weight: 700;
+  margin: 6px 0 4px;
+}
+
+.live-sky-empty {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.live-sky-events {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.live-sky-event {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: baseline;
+  padding: 6px 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+
+.live-sky-event-type {
+  font-weight: 600;
+}
+
+.live-sky-event-time,
+.live-sky-event-class {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+.live-sky-event-link {
+  margin-left: auto;
+  font-size: 0.78rem;
+  /* Browser-default link blue is near-invisible on the dark panel. */
+  color: #8fb4ff;
+}
+
+/* ---------------------------------------------------------------- launch packing (M6) */
+/* Player report: on a narrow phone this table's 5 columns don't fit and there was nothing
+   letting it scroll — it just overflowed the page, half off-screen. */
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.launch-packing-table {
+  /* `width: 100%` alone, inside an `overflow-x: auto` wrapper that's also 100% wide, would
+     just shrink the table to match the wrapper and never actually overflow it — the min-width
+     is what keeps the columns readable and makes this scroll on a narrow screen instead of
+     silently compressing text past legibility; on any screen wide enough, 100% still wins and
+     nothing here changes from before. */
+  width: 100%;
+  min-width: 540px;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+}
+
+.launch-packing-table th {
+  text-align: left;
+  color: var(--text-dim);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.launch-packing-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums;
+}
+
+.launch-packing-table tfoot td {
+  font-weight: 700;
+  border-top: 2px solid var(--line);
+  border-bottom: none;
+}
+
+/* ---------------------------------------------------------------- mission seed (M10.2) */
+.seed-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.seed-label {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.seed-input {
+  background: var(--bg-raised);
+  color: var(--text);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  width: 12ch;
+  min-height: 44px;
+}
+
+.risk-matrix-controls {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.risk-matrix-controls label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.risk-matrix-controls select {
+  font: inherit;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg-panel);
+  color: var(--text);
+}
+
+.risk-result {
+  font-weight: 700;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: var(--bg-raised);
+}
+
+/* ---------------------------------------------------------------- fact cards (M6) */
+.fact-card-strip {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+}
+
+.fact-card {
+  flex: 0 0 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.fact-card img {
+  width: 160px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.fact-card-title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.fact-card-credit {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- landing site map (M6) */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Player report, confirmed by reproduction: the Decision Card overlay (z-index 100 below)
+   could render BEHIND this map's own tiles/controls/popups once they'd loaded — Leaflet's
+   own stylesheet gives its internal panes z-index values up to 700 (the popup pane) and
+   1000 (zoom controls), and Leaflet only sets `position: relative` on this element at
+   runtime, never a z-index — a positioned element with no z-index of its own does not
+   establish a new stacking context, so those high z-index panes were never actually
+   contained here; they competed directly against the decision card's own z-index in
+   whatever ancestor stacking context actually contained both. `isolation: isolate` forces
+   a real stacking context on this element regardless of that ancestor chain, trapping every
+   descendant pane/control/popup inside it for good — the map's own z-index in the page stays
+   effectively 0 (auto), reliably below the card's 100, without touching layout or position. */
+.trek-map {
+  width: 100%;
+  height: 420px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  isolation: isolate;
+}
+
+/* ---------------------------------------------------------------- Decision Card (M8.2) */
+.decision-card-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 24px 16px;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.decision-card {
+  background: var(--bg-panel);
+  border: 1px solid var(--critical);
+  border-radius: var(--radius);
+  padding: 18px;
+  max-width: 520px;
+  width: 100%;
+}
+
+.decision-card-station {
+  margin: 0 0 4px;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.decision-card h2 {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+  line-height: 1.4;
+}
+
+.decision-card-countdown {
+  margin: 0 0 14px;
+  color: var(--caution);
+  font-weight: 600;
+}
+
+.decision-card-responses {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.decision-card-response {
+  width: 100%;
+  align-items: flex-start;
+  text-align: left;
+}
+
+.decision-card-response-text {
+  font-weight: 600;
+}
+
+.decision-card-response-mechanism {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  font-weight: 400;
+  font-style: italic;
+  color: var(--text-dim);
+}
+
+.decision-card-response-tradeoffs {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+  font-size: 0.78rem;
+  font-weight: 400;
+  color: var(--text-dim);
+}
+
+.decision-card-default {
+  margin: 14px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+.repair-queue-panel {
+  min-height: 420px;
+}
+
+/* ---------------------------------------------------------------- read-only status lists (M8.4) */
+.status-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.status-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.status-list li:last-child {
+  border-bottom: none;
+}
+
+.status-list-label {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.status-list-value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.repair-queue-spares {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 400;
+  color: var(--text-dim);
+}
+
+/* ---------------------------------------------------------------- crew location (M8.4 Part D) */
+.crew-location-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.crew-location-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.crew-location-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.crew-location-name {
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------- establishing shot (M9.3) */
+.establishing-shot-svg {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 400 / 160;
+  background: #060a16;
+  border-radius: var(--radius);
+  margin: 10px 0;
+  overflow: hidden;
+}
+
+.starfield {
+  width: 100%;
+  height: 100%;
+}
+
+.establishing-shot-craft {
+  animation: establishing-shot-transit 4s ease-in-out forwards;
+}
+
+@keyframes establishing-shot-transit {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(292px);
+  }
+}
+
+/* ---------------------------------------------------------------- habitat (M9.4a) */
+.habitat-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 400 / 220;
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+/* UI upgrade (Habitat): HUD-style corner badges laid over the scene itself, the way a real
+   camera/telemetry feed overlays its own readouts on the image rather than listing them
+   beside it. Real numbers only (day/night + outside temp, the sol/hour clock already shown
+   here before M9.6, live crew count) — every one of them also has a plain-text row in the
+   "Current conditions"/"Crew" tables right below (Ripple pattern, rule 6), this is a second,
+   decorative presentation of the same facts, never the only place they're told. */
+.habitat-hud-wrap {
+  position: relative;
+}
+
+.hud-badge {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(5, 8, 16, 0.62);
+  border: 1px solid rgba(139, 147, 184, 0.35);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #d7dcf0;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.hud-badge-tl {
+  top: 8px;
+  left: 8px;
+}
+
+.hud-badge-tr {
+  top: 8px;
+  right: 8px;
+}
+
+.hud-badge-bl {
+  bottom: 8px;
+  left: 8px;
+}
+
+.hud-alert-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--critical);
+  flex-shrink: 0;
+  animation: ops-live-pulse 1s ease-in-out infinite;
+}
+
+.hud-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--nominal);
+  flex-shrink: 0;
+  animation: ops-live-pulse 2s ease-in-out infinite;
+}
+
+/* ---------------------------------------------------------------- telemetry chrome (M9.6) */
+.setup-progress {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.habitat-telemetry-readout {
+  margin: 0 0 0 auto;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--nominal);
+}
+
+/* ---------------------------------------------------------------- ops center (player #9) */
+/* Mission Command's own "big board" — a real ops-room main display reads a handful of large
+   numbers at a glance, not paragraphs, so this sits above every other panel on the console.
+   The faint grid is drawn with the same dark tokens every panel already uses (--bg/--line),
+   never touching --shell-bg/--shell-text — the M9.5 "panels stay dark, shell stays light"
+   split this file's own telemetry-chrome section documents holds here too. */
+.ops-board {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(139, 147, 184, 0.09) 0px,
+      rgba(139, 147, 184, 0.09) 1px,
+      transparent 1px,
+      transparent 22px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(139, 147, 184, 0.09) 0px,
+      rgba(139, 147, 184, 0.09) 1px,
+      transparent 1px,
+      transparent 22px
+    ),
+    var(--bg);
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--shell-accent);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: var(--gap);
+}
+
+.ops-board-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+/* Rule 6: this dot is decorative emphasis on top of the text label right next to it
+   ("MISSION IN PROGRESS" / the real state.status word), never the only way that status is
+   conveyed — aria-hidden, exactly like habitat-telemetry's own status markers. */
+.ops-live-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--nominal);
+  flex-shrink: 0;
+  animation: ops-live-pulse 2s ease-in-out infinite;
+}
+
+@keyframes ops-live-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.ops-board-title {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.ops-board-readouts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 10px;
+}
+
+/* UI upgrade #2 (Mission Command): the same 4 real readouts, restyled as individual stat
+   cards — an icon in a rounded box beside the number, the pattern a real ops-dashboard's own
+   KPI row uses. Still the exact same data as the plain grid before; only the chrome changed. */
+.ops-readout {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-raised);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
+
+.ops-readout-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(139, 147, 184, 0.14);
+  color: var(--shell-accent);
+  font-size: 1.05rem;
+  flex-shrink: 0;
+}
+
+.ops-readout-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.ops-readout-value {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--nominal);
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ops-readout-value.ops-readout-alert {
+  color: var(--critical);
+}
+
+.ops-readout-unit {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.ops-readout-label {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+/* ---------------------------------------------------------------- orbital view (player #9) */
+/* NASA's own real "Eyes on the Solar System" (player request: "use it directly into this
+   trainer"), embedded via its own official Embed panel's `logo=false` parameter — verified
+   directly (curled the page, drove the app's own Share > Embed UI) to genuinely remove the
+   NASA insignia from the embedded frame, not a CSS crop trying to reach into a cross-origin
+   iframe's own DOM (which the browser's Same-Origin Policy would block outright). See
+   OrbitalView.tsx's own doc comment for the full compliance reasoning and the other embed
+   parameters used. */
+/* Player report: "the content panel of orbital view doesn't work in the mobile UI," plus a
+   separate report that its "EYES ON THE SOLAR SYSTEM" title reads too large on mobile.
+   Investigated directly — loaded the real embed URL in a real browser at this container's own
+   real dimensions, at several heights, to see what NASA's app itself does there (there's no
+   way to inspect or restyle its cross-origin content otherwise). NASA's app renders a bottom
+   info sheet ("Mars ▼") and its own title at a fixed real pixel size, regardless of the
+   iframe's width — what actually breaks is the container's *height*. At the old 400/240
+   aspect ratio, a ~358px-wide mobile container is only ~215px tall, which isn't enough room
+   for the sheet and title to coexist with the 3D view — the sheet ends up covering almost
+   everything, and the title (never shrunk for our box, since we can't touch its CSS) reads as
+   oversized relative to what little space is left. The same 400/240 ratio at the ~860px width
+   this panel gets on desktop yields ~516px tall, which the same direct test confirmed is
+   already enough room — so only the mobile default needed a fixed, taller height (measured
+   against the real embed until the sheet, title, and 3D globe all had genuine room — 420px
+   was already clean, 440px used here for a bit more margin); the `min-width: 860px` override
+   below keeps the already-working desktop ratio. NASA's own title text can't be resized
+   directly — giving its layout the vertical room it expects is what actually fixes both
+   reports, not a font-size that was never ours to set. */
+.orbital-iframe-container {
+  width: 100%;
+  height: 440px;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #000000;
+  position: relative;
+}
+
+@media (min-width: 860px) {
+  .orbital-iframe-container {
+    height: auto;
+    aspect-ratio: 400 / 240;
+  }
+}
+
+.orbital-iframe {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* A plain black background behind a slow-to-start iframe reads as "broken," not "loading" —
+   player report ("sometimes just shows a black screen"). This overlay sits on top of that same
+   black background until the iframe's own `onLoad` fires, so the wait is visibly a wait. */
+.orbital-loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 16px;
+  text-align: center;
+  color: #e3e8f5;
+  font-size: 0.82rem;
+  background: #000000;
+  pointer-events: none;
+}
+
+.orbital-loading-spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.25);
+  border-top-color: var(--nominal);
+  animation: orbital-loading-spin 0.9s linear infinite;
+}
+
+@keyframes orbital-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.orbital-view-state {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--nominal);
+}
+
+/* ---------------------------------------------------------------- mission report (M10.8) */
+.mission-report {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 0 var(--gap);
+}
+
+.report-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--gap);
+  margin: var(--gap) 0;
+}
+
+.report-print-hint {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+/* ---------------------------------------------------------------- replay controls (M10.9) */
+.replay-controls {
+  background:
+    repeating-linear-gradient(
+      0deg,
+      rgba(139, 147, 184, 0.06) 0px,
+      rgba(139, 147, 184, 0.06) 1px,
+      transparent 1px,
+      transparent 22px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(139, 147, 184, 0.06) 0px,
+      rgba(139, 147, 184, 0.06) 1px,
+      transparent 1px,
+      transparent 22px
+    ),
+    var(--bg-raised);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--shell-accent);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  margin-bottom: var(--gap);
+}
+
+.replay-progress {
+  margin: 0 0 8px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.report-head h1 {
+  margin-bottom: 4px;
+}
+
+.report-head h2 {
+  margin: 0 0 4px;
+  font-size: 1.1rem;
+  color: var(--text-dim);
+}
+
+.report-run-signature {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.report-disclosure {
+  color: var(--text-dim);
+  font-size: 0.82rem;
+  font-style: italic;
+  margin: 0 0 var(--gap);
+}
+
+.report-crew-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.report-crew-table th,
+.report-crew-table td {
+  text-align: left;
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.report-decision-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.report-decision-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.report-decision-station {
+  min-width: 130px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+
+.report-decision-time {
+  font-variant-numeric: tabular-nums;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.nasa-card-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.nasa-card {
+  border-left: 3px solid var(--shell-accent);
+  padding: 6px 0 6px 10px;
+}
+
+.nasa-card-analogue {
+  font-weight: 600;
+  margin: 0 0 4px;
+}
+
+.nasa-card-source {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+}
+
+.report-not-affiliated {
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.debrief-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--gap);
+  align-items: center;
+  margin-bottom: var(--gap);
+}
+
+/* ---------------------------------------------------------------- print (M10.8) */
+/* Placed before the reduced-motion block below rather than after it — see that block's own
+   comment (M9.7) on why a later same-specificity rule can otherwise silently out-rank an
+   @media block here. Nothing in this block shares a selector with reduced-motion's, but the
+   ordering is kept consistent regardless so the next person adding a print rule doesn't have
+   to re-derive why the reduced-motion block sits last. */
+@media print {
+  :root {
+    /* Brief rule 6 still holds on paper: every status class already carries a glyph and a
+       border pattern alongside its colour, so inverting to black-on-white here (rather than
+       trying to preserve the dark mission-control palette in ink) costs nothing but toner —
+       nothing on this page has ever depended on colour alone. --nominal/--caution/--critical
+       are left as is: a colour printer still shows them, and a black-and-white one already
+       has the glyph + border to fall back on. */
+    --bg: #ffffff;
+    --bg-panel: #ffffff;
+    --bg-raised: #f2f2f2;
+    --line: #999999;
+    --text: #000000;
+    --text-dim: #333333;
+    --shell-bg: #ffffff;
+    --shell-text: #000000;
+    --shell-text-dim: #333333;
+  }
+
+  body,
+  .app {
+    background: #fff;
+    color: #000;
+  }
+
+  /* Chrome that means nothing on paper: the tab nav and header actions (New Mission, Data
+     Sources, low-power/language toggles), the Decision Card overlay, the live mission-log
+     feed, the onboarding coach mark, the generic app footer (the Mission Report's own
+     data-sources footer replaces it), the version-mismatch/invalid banner, and the Report
+     page's own "Back"/print-hint toolbar and its "Copy report link" section — a link is
+     useless once already on paper. */
+  .tab-nav,
+  .app-head-actions,
+  .decision-card-overlay,
+  .event-feed-panel,
+  .coach-mark,
+  .credits,
+  .run-link-banner,
+  .report-toolbar,
+  .report-no-print,
+  .debrief-actions {
+    display: none !important;
+  }
+
+  /* A printed link is dead — spell out the URL next to it. Skips an anchor with no href
+     (there are none in this app) and never applies inside the toolbar/link-button chrome
+     already hidden above. */
+  a[href]:after {
+    content: " (" attr(href) ")";
+    font-size: 0.85em;
+    color: inherit;
+    word-break: break-all;
+  }
+
+  .panel,
+  .nasa-card,
+  .report-decision-row,
+  .incident-row,
+  .crew-loss-report {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  /* A cockpit photo is dead weight on paper, and its regions carry no readable headings of
+     their own — print the plain Classic layout instead, same as every other visitor who
+     can't use cockpit view (M9.1's own fallback list). */
+  .cockpit-frame,
+  .cockpit-toggle {
+    display: none !important;
+  }
+
+  .station-cockpit-classic-source {
+    display: block !important;
+  }
+}
+
+/* ---------------------------------------------------------------- cockpit view (M9.1) */
+/* Station Cockpit View — docs/PHASE2_BRIEF.md's own M9.1 section (the outer, non-git-tracked
+   copy). Presentation only: every control/number inside a cockpit screen is the exact same
+   DOM content Classic view renders, just portaled elsewhere (apps/web/src/cockpit/). */
+
+.station-cockpit-shell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.cockpit-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cockpit-fallback-note {
+  color: var(--text-dim);
+  font-size: 0.78rem;
+}
+
+/* The hidden copy of the console StationCockpit.tsx keeps mounted so panels keep ticking —
+   never shown, never reachable by Tab (`aria-hidden` on the wrapper isn't enough on its own:
+   a focusable control inside it would still be Tab-reachable while invisible). */
+.station-cockpit-classic-source {
+  display: none;
+}
+
+.cockpit-frame {
+  /* Player request: fill the page, no blank space below the photo — previously sized by the
+     photo's own `aspectRatio` (a 16:9-ish source letterboxed well short of typical viewport
+     height). `object-fit: fill` on the image below (M9.1's own "don't crop, stretch if
+     needed") means this frame can take any height/width without breaking the region
+     percentages painted over it — they scale with the stretch, not with the photo's own
+     shape, so growing this box needed no change to any calibrated screenMaps.ts entry. */
+  position: relative;
+  width: 100%;
+  height: min(92vh, 1100px);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #000;
+}
+
+.cockpit-frame-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  /* M9.1's own asset note: "don't crop, stretch if needed" — the photo fills the frame
+     exactly, whatever shape the frame is sized to (see .cockpit-frame's own comment on why
+     that's no longer tied to the photo's own aspect ratio), so the region percentages painted
+     over it always line up with what's actually visible — `object-fit: cover` would crop,
+     silently moving every calibrated region's true position. */
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* One region's own frame/backing — the "Screen styling" section. A dark backing (so a region
+   with little content doesn't show the photo through it, which would look like a broken
+   screen) plus a thin bezel glow and inset shadow, matching this app's own dark-panel
+   language (--bg-panel/--line) rather than inventing a new palette. */
+.cockpit-screen {
+  box-sizing: border-box;
+  display: flex;
+  border-radius: 4px;
+}
+
+.cockpit-screen-content {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: rgba(7, 11, 20, 0.82);
+  border-radius: 2px;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+/* A region this small still needs every control inside it to clear the brief's own 44px
+   touch-target rule and 14px text floor — scaling the chrome down, never the content. */
+.cockpit-screen-content .panel {
+  margin-bottom: 0;
+  padding: 6px;
+  border-top-width: 2px;
+}
+
+.cockpit-screen-content h2 {
+  font-size: 15px;
+}
+
+/* Player report: Classic view's own hint paragraphs are written for a full-width desktop
+   panel and routinely ran 3-5 lines — inside a cockpit screen a fraction of that width, they
+   pushed the actual data (gauges, buttons) below the fold or cut off mid-sentence with no
+   visible scroll affordance. Clamped to the headline sentence; the full text is one toggle
+   away in Classic view, never lost. */
+.cockpit-screen-content .panel-hint {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Same overcrowding problem, specific to FactCardGallery (power-fact-gallery,
+   comms-fact-gallery, lifesupport-gallery-*): a horizontally-scrolling photo strip needs real
+   width to read as photos at all — inside a cockpit screen it rendered as a sliver of cropped
+   thumbnails below the (already clamped) heading, adding noise without conveying anything.
+   The heading + provenance badge stay, so the panel is still clearly "present" (reachable via
+   its own overflow tab if it doesn't fit a region); the photos themselves stay Classic-only. */
+.cockpit-screen-content .fact-card-strip {
+  display: none;
+}
+
+/* Multi-gauge panels (Resources, Reactor & Arrays) auto-fit into multiple columns in wide MFDs */
+.cockpit-screen-content .gauge-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(135px, 1fr));
+  gap: 6px;
+}
+
+.cockpit-screen-content .gauge {
+  padding: 6px 8px;
+  border-left-width: 3px;
+}
+
+.cockpit-screen-content .gauge-head {
+  font-size: 14px;
+}
+
+.cockpit-screen-content .gauge-value-row {
+  margin: 2px 0 4px;
+}
+
+.cockpit-screen-content .gauge-value {
+  font-size: 1.05rem;
+}
+
+.cockpit-screen-content .gauge-track {
+  height: 7px;
+}
+
+.cockpit-screen-content .gauge-detail {
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+.cockpit-screen-content .panel-hint {
+  font-size: 14px;
+  margin-bottom: 6px;
+}
+
+.cockpit-screen-content .panel-head-row {
+  gap: 8px;
+}
+
+.cockpit-screen-content .status-list {
+  gap: 3px;
+}
+
+.cockpit-screen-content .status-list li {
+  padding: 4px 0;
+}
+
+.cockpit-screen-content .status-list-label {
+  font-size: 14px;
+}
+
+.cockpit-screen-content .chip-grid {
+  gap: 6px;
+}
+
+.cockpit-screen-content .chip-grid-item {
+  padding: 6px 8px;
+}
+
+.cockpit-screen-content .chip-grid-sub {
+  font-size: 14px;
+}
+
+.cockpit-screen-content .button-row {
+  gap: 6px;
+}
+
+/* Padding only, never `min-height` — that 44px stays the real touch-target floor, same
+   control as Classic view just tighter-fitting. */
+.cockpit-screen-content .btn {
+  padding: 6px 10px;
+}
+
+.cockpit-screen-ticker .cockpit-screen-content {
+  display: flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+.cockpit-ticker-readout {
+  /* M9.1's own accessibility rule: "minimum body text 14px after scaling" — set explicitly
+     here since the ticker strip is the narrowest region and otherwise inherits
+     .cockpit-screen-content's smaller 0.78rem. One-line only, per the brief's own rule for
+     this region role; it clips rather than wraps or pushes the strip taller. */
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cockpit-screen-alert .cockpit-screen-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cockpit-alert-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+  padding: 4px;
+}
+
+.cockpit-alert-summary-label {
+  /* Was 0.68rem (~11px) — under the 14px body-text floor the rest of this cockpit CSS now
+     holds to (see .cockpit-screen-content's own comment); this is real content (which gauge
+     the alert is about), not decorative chrome. */
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-dim);
+}
+
+.cockpit-alert-summary-status {
+  font-weight: 700;
+}
+
+.cockpit-alert-summary-value {
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
+.cockpit-screen-overflow-host {
+  position: absolute;
+  box-sizing: border-box;
+}
+
+.cockpit-overflow {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: rgba(7, 11, 20, 0.82);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.cockpit-overflow-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  padding: 4px 6px;
+  background: rgba(4, 7, 16, 0.7);
+  border-bottom: 1px solid rgba(80, 120, 255, 0.15);
+}
+
+.cockpit-overflow-tab {
+  background: rgba(25, 34, 58, 0.7);
+  color: var(--text-dim);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  font-size: 0.76rem;
+  font-weight: 500;
+  padding: 4px 8px;
+  cursor: pointer;
+  min-height: 0;
+  transition: all 0.15s ease;
+}
+
+.cockpit-overflow-tab:hover {
+  background: rgba(40, 55, 90, 0.85);
+  color: var(--text);
+}
+
+.cockpit-overflow-tab-active {
+  background: rgba(45, 75, 140, 0.9);
+  color: #fff;
+  border-color: rgba(120, 170, 255, 0.6);
+  box-shadow: 0 0 6px rgba(80, 130, 255, 0.3);
+}
+
+.cockpit-overflow-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 8px;
+}
+
+/* Strips the box chrome `.cockpit-screen-content` (shared via OverflowTabs.tsx, see its own
+   comment) would otherwise duplicate inside `.cockpit-overflow`, which already draws a
+   border/background around the whole tab strip + body — everything else that class brings
+   (14px floor, gauge/panel/list density, panel-hint clamp, gallery hiding) still applies. */
+.cockpit-overflow-body.cockpit-screen-content {
+  background: none;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.cockpit-overflow-panel .panel {
+  margin-bottom: 0;
+}
+
+/* ---------------------------------------------------------------- reduced motion (M9.7 fix) */
+/* Deliberately last in the file: every rule above that sets an `animation`/`transition` on
+   one of these selectors shares the exact same specificity (a single class), so normal CSS
+   cascade order — not specificity — decides the winner. Moved here after M9.7's own
+   Playwright pass caught a real bug: the OS-level media query used to sit near the top of
+   this file (right after :root), so a later same-specificity base rule for
+   .establishing-shot-craft (added in the "establishing shot" section, M9.3) silently won
+   regardless of the media query being active — prefers-reduced-motion never actually did
+   anything for that animation, only the manual low-power-mode toggle did (whose selector has
+   higher specificity — two classes, not one — so it was never affected by this bug). */
+@media (prefers-reduced-motion: reduce) {
+  .gauge-fill {
+    transition: none;
+  }
+
+  .establishing-shot-craft {
+    animation: none;
+    transform: translateX(292px);
+  }
+
+  .ops-live-dot {
+    animation: none;
+    opacity: 1;
+  }
+
+  .hud-alert-dot,
+  .hud-live-dot {
+    animation: none;
+    opacity: 1;
+  }
+
+  .orbital-loading-spinner {
+    animation: none;
+  }
+}
+
+/* The manual low-power-mode toggle (App.tsx) applies the exact same rules as the OS
+   preference above, regardless of what the OS itself reports — kept as a separate block
+   (a class selector can't join a `@media` block's condition) rather than merged into one. */
+:root.low-power-mode .gauge-fill {
+  transition: none;
+}
+
+:root.low-power-mode .establishing-shot-craft {
+  animation: none;
+  transform: translateX(292px);
+}
+
+:root.low-power-mode .ops-live-dot {
+  animation: none;
+  opacity: 1;
+}
+
+:root.low-power-mode .hud-alert-dot,
+:root.low-power-mode .hud-live-dot {
+  animation: none;
+  opacity: 1;
+}
+
+:root.low-power-mode .orbital-loading-spinner {
+  animation: none;
+}
+
+.event-card.event-card-highlighted {
+  box-shadow:
+    0 0 0 3px #38bdf8,
+    0 0 25px rgba(56, 189, 248, 0.4) !important;
+  transform: scale(1.01);
+  transition: all 0.3s ease;
+}
