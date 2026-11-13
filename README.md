@@ -3,7 +3,7 @@
 **Junior Astronaut Mission Trainer** — a NASA Space Apps Challenge 2026 submission for
 *"Build a Junior Astronaut Mission Trainer"*.
 
-**Live app:** [build-a-junior-astronaut-mission-tr.vercel.app](https://build-a-junior-astronaut-mission-tr.vercel.app) · **Static About Page:** [`about.html`](apps/web/public/about.html)
+**Live app:** [build-a-junior-astronaut-mission-tr.vercel.app](https://solkeeper.vercel.app/) · **Static About Page:** [`about.html`](apps/web/public/about.html)
 
 Sol Keeper is a browser-based, offline-ready mission simulator designed for students ages 7–12 (with depths flexing to high school and classroom use) that transforms deep space survival constraints into gameplay. Operating lunar and Martian outposts across 5 training missions and 3 historical crisis replays, players make real decisions across five station consoles—balancing life support, power load shedding, radiation sheltering, food production, and communication light delays. Every number the simulation computes traces directly to authenticated NASA technical standards (BVAD, OCHMO, APR 8070.1) or real space weather and orbital telemetry (DONKI, OSDR, Horizons, Trek). Through the **Reality Dial**, the same deterministic physics engine is presented at three cognitive depths—Cadet (visual gauges, qualitative status words, Flesch–Kincaid Grade 3.6), Specialist (SI engineering units), and Commander (mathematical rates and equations)—ensuring that no choice is free and every decision teaches something true.
 
