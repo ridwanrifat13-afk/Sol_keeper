@@ -60,5 +60,5 @@
   *"Sol Keeper requires zero logins, zero downloads, and works completely offline as a Progressive Web App in English and Bangla. Tested across 75 test suites and 4,050 balance seeds, it’s built for real classrooms and real young astronauts. Welcome to deep space survival."*
 - **On-Screen Text:**  
   *Sol Keeper · Built by Projonmo Apollo (CUET) · NASA Space Apps Challenge 2026*  
-  *Live at: build-a-junior-astronaut-mission-tr.vercel.app*
+  *Live at: solkeeper.vercel.app*
 

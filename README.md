@@ -16,7 +16,7 @@ Built by **Projonmo Apollo**, from CUET.
 Experience the core mechanics, real data grounding, and Reality Dial in 60 seconds:
 
 1. **0:00 – Launch in One Click**:
-   - Open the live app and click **[Fast Play (Jezero Outpost)](https://build-a-junior-astronaut-mission-tr.vercel.app/?fastPlay=1)** (or launch with pre-configured telemetry via [Deep Link](https://build-a-junior-astronaut-mission-tr.vercel.app/?v=9&sc=jezero-outpost&d=nominal&cs=4&site=jezero&p=solarBattery&sh=regolithBerm&sd=42)) to bypass setup and land directly on the Mission Briefing.
+   - Open the live app and click **[Fast Play (Jezero Outpost)](https://solkeeper.vercel.app/?fastPlay=1)** (or launch with pre-configured telemetry via [Deep Link](https://solkeeper.vercel.app/?v=9&sc=jezero-outpost&d=nominal&cs=4&site=jezero&p=solarBattery&sh=regolithBerm&sd=42)) to bypass setup and land directly on the Mission Briefing.
 2. **0:15 – Review Real Space Agency Data**:
    - Inspect the Martian environmental conditions (30 sols, solar-only architecture, impending 60-hour dust storm). Check **Today on the Sun** for real solar flare telemetry from NASA DONKI and inspect the **Astronaut Science** card derived from NASA OSDR space biology studies.
 3. **0:30 – Experience the Reality Dial**:
