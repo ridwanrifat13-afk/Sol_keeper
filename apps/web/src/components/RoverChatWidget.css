@@ -1,8 +1,8 @@
 .rover-chat-container {
   position: fixed;
   bottom: 24px;
-  right: 24px;
-  left: auto;
+  left: 24px;
+  right: auto;
   z-index: 1100;
   pointer-events: auto;
 }
@@ -141,8 +141,8 @@
 .rover-chat-box {
   position: absolute;
   bottom: 56px;
-  right: 0;
-  left: auto;
+  left: 0;
+  right: auto;
   width: 320px;
   max-width: calc(100vw - 32px);
   background: rgba(15, 23, 42, 0.95);
@@ -275,6 +275,12 @@
   .rover-chat-container {
     bottom: 16px;
     right: 16px;
+    left: auto;
+  }
+
+  .rover-chat-box {
+    right: 0;
+    left: auto;
   }
 
   .rover-mascot-label {
