@@ -149,7 +149,7 @@ export function RoverChatWidget({ currentView }: RoverChatWidgetProps) {
         </aside>
       )}
 
-      {/* Floating Bottom-Left Mascot Glowing Pill Button */}
+      {/* Floating Bottom-Right Mascot Glowing Pill Button */}
       <button
         type="button"
         className={`rover-mascot-pill-btn ${hasAlert ? "has-alert" : ""} ${isOpen ? "is-open" : ""}`}

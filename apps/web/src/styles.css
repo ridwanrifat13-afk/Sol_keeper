@@ -1428,7 +1428,7 @@ html.cockpit-active .app {
   padding: 24px 16px;
   overflow-y: auto;
   overscroll-behavior: contain;
-  z-index: 100;
+  z-index: 2000;
 }
 
 .overlay-panel {

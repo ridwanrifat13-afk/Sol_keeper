@@ -11,9 +11,13 @@
     ),
     url("/images/_%20(10).jpeg");
   background-repeat: no-repeat, repeat-y;
-  background-position: center top, center top;
+  background-position:
+    center top,
+    center top;
   background-attachment: scroll, scroll;
-  background-size: 100% 100%, 100% auto;
+  background-size:
+    100% 100%,
+    100% auto;
   color: #fafafa;
   min-height: 100vh;
   position: relative;
@@ -260,7 +264,12 @@
   margin-top: -100vh;
   z-index: 5;
   pointer-events: none;
-  background: linear-gradient(90deg, rgba(5, 6, 10, 0.82) 0%, rgba(5, 6, 10, 0.55) 42%, rgba(5, 6, 10, 0) 75%);
+  background: linear-gradient(
+    90deg,
+    rgba(5, 6, 10, 0.82) 0%,
+    rgba(5, 6, 10, 0.55) 42%,
+    rgba(5, 6, 10, 0) 75%
+  );
 }
 
 @media (min-width: 900px) {
@@ -935,13 +944,20 @@
     font-size: 0.65rem;
   }
 
+  .modern-hero-nav-btn {
+    display: none;
+  }
+
   .modern-hero-nav-actions {
-    gap: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.35rem;
   }
 
   .modern-hero-cta-btn {
     font-size: 0.68rem;
-    padding: 0.5rem 0.7rem;
+    padding: 0.4rem 0.65rem;
     white-space: nowrap;
   }
 
@@ -997,13 +1013,19 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   padding: 1.75rem 2rem;
-  box-shadow: 0 0 32px rgba(245, 158, 11, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  transition: border-color 0.25s, box-shadow 0.25s;
+  box-shadow:
+    0 0 32px rgba(245, 158, 11, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  transition:
+    border-color 0.25s,
+    box-shadow 0.25s;
 }
 
 .modern-hero-motd-card:hover {
   border-color: rgba(245, 158, 11, 0.35);
-  box-shadow: 0 0 40px rgba(245, 158, 11, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  box-shadow:
+    0 0 40px rgba(245, 158, 11, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
 }
 
 .modern-hero-motd-header {
@@ -1159,7 +1181,10 @@
   border: none;
   cursor: pointer;
   box-shadow: 0 4px 14px rgba(245, 158, 11, 0.3);
-  transition: transform 0.15s, filter 0.15s, box-shadow 0.15s;
+  transition:
+    transform 0.15s,
+    filter 0.15s,
+    box-shadow 0.15s;
 }
 
 .modern-hero-motd-launch-btn:hover {

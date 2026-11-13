@@ -1,7 +1,8 @@
 .rover-chat-container {
   position: fixed;
   bottom: 24px;
-  left: 24px;
+  right: 24px;
+  left: auto;
   z-index: 1100;
   pointer-events: auto;
 }
@@ -10,13 +11,13 @@
 .rover-mascot-pill-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.65rem;
-  padding: 0.35rem 1.1rem 0.35rem 0.4rem;
+  gap: 0.55rem;
+  padding: 0.3rem 0.95rem 0.3rem 0.35rem;
   border-radius: 9999px;
   border: 2px solid rgba(56, 189, 248, 0.7);
   background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
   box-shadow:
-    0 0 22px rgba(56, 189, 248, 0.55),
+    0 0 20px rgba(56, 189, 248, 0.55),
     0 8px 24px rgba(0, 0, 0, 0.45);
   cursor: pointer;
   transition:
@@ -36,14 +37,14 @@
 }
 
 .rover-mascot-avatar-circle {
-  width: 44px;
-  height: 44px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background: linear-gradient(135deg, #0284c7, #38bdf8);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+  box-shadow: 0 0 10px rgba(56, 189, 248, 0.55);
   position: relative;
   flex-shrink: 0;
   overflow: hidden;
@@ -139,10 +140,11 @@
 /* Chat Box Popover */
 .rover-chat-box {
   position: absolute;
-  bottom: 68px;
-  left: 0;
+  bottom: 56px;
+  right: 0;
+  left: auto;
   width: 320px;
-  max-width: calc(100vw - 48px);
+  max-width: calc(100vw - 32px);
   background: rgba(15, 23, 42, 0.95);
   backdrop-filter: blur(16px);
   border: 1px solid rgba(56, 189, 248, 0.35);
@@ -267,4 +269,38 @@
   background: rgba(56, 189, 248, 0.25);
   color: #ffffff;
   transform: translateY(-1px);
+}
+
+@media (max-width: 768px) {
+  .rover-chat-container {
+    bottom: 16px;
+    right: 16px;
+  }
+
+  .rover-mascot-label {
+    display: none;
+  }
+
+  .rover-mascot-pill-btn {
+    padding: 0;
+    border-radius: 50%;
+    gap: 0;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .rover-mascot-avatar-circle {
+    width: 36px;
+    height: 36px;
+    border: 2px solid rgba(56, 189, 248, 0.85);
+    box-shadow:
+      0 0 16px rgba(56, 189, 248, 0.7),
+      0 4px 14px rgba(0, 0, 0, 0.5);
+  }
+
+  .rover-mascot-pill-btn.is-open .rover-mascot-avatar-circle {
+    border-color: rgba(244, 63, 94, 0.85);
+    box-shadow: 0 0 16px rgba(244, 63, 94, 0.7);
+  }
 }
